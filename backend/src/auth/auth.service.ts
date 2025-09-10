@@ -27,7 +27,7 @@ export class AuthService {
                     }
                 })
             );
-            return respon   se.data;
+            return response.data;
         } catch (error) {
 
 
