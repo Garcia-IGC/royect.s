@@ -3,5 +3,5 @@ import { MallaService } from './malla.service';
 export declare class MallaController {
     private readonly mallaService;
     constructor(mallaService: MallaService);
-    obtenerMallas(datosAuth: AuthDataDto): Promise<import("./dto/auth-data.dto").MallaResultado[]>;
+    obtenerMallas(datosAuth: AuthDataDto): Promise<import("./malla.service").ResultadoFinal>;
 }

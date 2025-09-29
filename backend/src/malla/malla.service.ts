@@ -3,6 +3,10 @@ import { HttpService } from '@nestjs/axios';
 import { AuthDataDto, MallaResultado } from './dto/auth-data.dto';
 import { firstValueFrom } from 'rxjs';
 
+export interface ResultadoFinal {
+  rut: string;
+  carreras: MallaResultado[];
+}
 
 @Injectable()
 export class MallaService {
@@ -10,7 +14,10 @@ export class MallaService {
 
     async obtenerMallas(datosAuth: AuthDataDto) {
 
-        const resultados: MallaResultado[] = [];
+        const resultadoFinal: ResultadoFinal = {
+            rut: datosAuth.rut,
+            carreras: []
+            };
 
         for (const carrera of datosAuth.carreras) {
             const url = `https://losvilos.ucn.cl/hawaii/api/mallas?${carrera.codigo}-${carrera.catalogo}`;
@@ -20,7 +27,7 @@ export class MallaService {
                 this.httpService.get(url, { headers: { 'X-HAWAII-AUTH': 'jf400fejof13f' }})
                 );
                 
-                resultados.push({
+                resultadoFinal.carreras.push({
                     carrera: carrera.nombre,
                     codigo: carrera.codigo,
                     catalogo: carrera.catalogo,
@@ -29,7 +36,7 @@ export class MallaService {
 
             } catch (error) {
                 console.error(`Error al obtener malla de ${carrera.codigo}-${carrera.catalogo}`, error.message);
-                resultados.push({
+                resultadoFinal.carreras.push({
                     carrera: carrera.nombre,
                     codigo: carrera.codigo,
                     catalogo: carrera.catalogo,
@@ -38,7 +45,7 @@ export class MallaService {
                 });
             }
             }
-        return resultados;
+        return resultadoFinal;
 
     }
 }

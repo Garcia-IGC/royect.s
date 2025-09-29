@@ -27,13 +27,19 @@ body {
     justify-content: center;
 }
 
-.contenedorBody{
+.contenedorBody {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    height: 100vh;
-    }
+    /* ELIMINA O COMENTA ESTAS LÍNEAS CUANDO NO ESTÉS EN LA PÁGINA DE LOGIN: */
+    /* justify-content: center; */ 
+    /* height: 100vh; */
+    
+    /* Manten esto para el flujo vertical: */
+    width: 100%;
+    min-height: 100vh; 
+}
+
 
 .botonEntrar{
     font-family:'Lucida Sans';
@@ -47,4 +53,105 @@ body {
     width: 100%;
     border-radius: 6px;
     font-weight: bold;
+}
+
+
+.malla-container {
+    padding: 40ppx;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-family: Arial, sans-serif;
+}
+
+.titulo-rut {
+    text-align: center;
+    color: #004268fb;
+    margin-bottom: 40px;
+}
+
+/* --- Estilo de la Tarjeta de Carrera --- */
+
+.carrera-card {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    padding: 25px;
+    margin-bottom: 30px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.carrera-header {
+    color: #469bd4cb;
+    border-bottom: 4px solid #e0e0e0;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+/* --- Estilo del Grid de Semestres --- */
+
+.semestre-grid {
+    display: grid;
+    /* Usa la variable CSS para crear N columnas de igual ancho */
+    grid-template-columns: repeat(var(--num-semestres), 1fr); 
+    gap: 10px; /* Ajusta el espacio entre columnas */
+    padding: 5px;
+    /* Asegúrate de que no tenga flex-wrap: nowrap; ni overflow-x: auto; */
+}
+
+.semestre-column {
+    background: #eef5f8;
+    border-radius: 10px;
+    padding: 15px 5px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.semestre-title {
+    color: #004268;
+    font-size: 1.2em;
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+/* --- Estilo de las Asignaturas (Tarjetas Internas) --- */
+
+.asignatura-item {
+    background: #ffffff;
+    border: 1px solid #c9e6ff;
+    border-left: 5px solid #469bd4; /* Barra de color para destacar */
+    border-radius: 6px;
+    padding: 8pk;
+    margin-bottom: 10px;
+    font-size: 0.85em;
+}
+
+.asignatura-code {
+    font-weight: bold;
+    color: #333;
+}
+
+.asignatura-name {
+    margin: 5px 0;
+    color: #555;
+}
+
+.asignatura-prereq {
+    font-size: 0.8em;
+    color: #ff6347; /* Color de advertencia para prerequisitos */
+    font-style: italic;
+    margin-top: 5px;
+}
+
+.titulo-persona {
+    text-align: center;
+    color: #004268;
+    margin-bottom: 30px;
+    font-size: 2em;
+    font-weight: bold;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #469bd4cb;
 }

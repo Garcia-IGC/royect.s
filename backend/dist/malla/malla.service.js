@@ -19,12 +19,15 @@ let MallaService = class MallaService {
         this.httpService = httpService;
     }
     async obtenerMallas(datosAuth) {
-        const resultados = [];
+        const resultadoFinal = {
+            rut: datosAuth.rut,
+            carreras: []
+        };
         for (const carrera of datosAuth.carreras) {
             const url = `https://losvilos.ucn.cl/hawaii/api/mallas?${carrera.codigo}-${carrera.catalogo}`;
             try {
                 const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, { headers: { 'X-HAWAII-AUTH': 'jf400fejof13f' } }));
-                resultados.push({
+                resultadoFinal.carreras.push({
                     carrera: carrera.nombre,
                     codigo: carrera.codigo,
                     catalogo: carrera.catalogo,
@@ -33,7 +36,7 @@ let MallaService = class MallaService {
             }
             catch (error) {
                 console.error(`Error al obtener malla de ${carrera.codigo}-${carrera.catalogo}`, error.message);
-                resultados.push({
+                resultadoFinal.carreras.push({
                     carrera: carrera.nombre,
                     codigo: carrera.codigo,
                     catalogo: carrera.catalogo,
@@ -42,7 +45,7 @@ let MallaService = class MallaService {
                 });
             }
         }
-        return resultados;
+        return resultadoFinal;
     }
 };
 exports.MallaService = MallaService;
