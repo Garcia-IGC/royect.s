@@ -6,21 +6,19 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AppModule = void 0;
+exports.MallaModule = void 0;
 const common_1 = require("@nestjs/common");
-const app_controller_1 = require("./app.controller");
-const app_service_1 = require("./app.service");
-const auth_module_1 = require("./auth/auth.module");
+const malla_controller_1 = require("./malla.controller");
+const malla_service_1 = require("./malla.service");
 const axios_1 = require("@nestjs/axios");
-const malla_module_1 = require("./malla/malla.module");
-let AppModule = class AppModule {
+let MallaModule = class MallaModule {
 };
-exports.AppModule = AppModule;
-exports.AppModule = AppModule = __decorate([
+exports.MallaModule = MallaModule;
+exports.MallaModule = MallaModule = __decorate([
     (0, common_1.Module)({
-        imports: [auth_module_1.AuthModule, axios_1.HttpModule, malla_module_1.MallaModule],
-        controllers: [app_controller_1.AppController],
-        providers: [app_service_1.AppService],
+        imports: [axios_1.HttpModule],
+        controllers: [malla_controller_1.MallaController],
+        providers: [malla_service_1.MallaService],
     })
-], AppModule);
-//# sourceMappingURL=app.module.js.map
+], MallaModule);
+//# sourceMappingURL=malla.module.js.map
