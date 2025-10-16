@@ -10,4 +10,11 @@ export class MallaController {
   async obtenerMallas(@Body() datosAuth: AuthDataDto) {
     return await this.mallaService.obtenerMallas(datosAuth);
   }
+  @Post('obtener-avances')
+  async obtenerAvances(@Body() datosAuth: AuthDataDto) {
+
+    const resultadoMallas = await this.mallaService.obtenerMallas(datosAuth);
+    return await this.mallaService.obtenerAvance(resultadoMallas);
+    
+  }
 }

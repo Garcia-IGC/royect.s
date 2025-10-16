@@ -47,6 +47,32 @@ let MallaService = class MallaService {
         }
         return resultadoFinal;
     }
+    async obtenerAvance(resultadoFinal) {
+        const avances = [];
+        for (const carrera of resultadoFinal.carreras) {
+            const url = `https://puclaro.ucn.cl/eross/avance/avance.php?rut=${resultadoFinal.rut}&codcarrera=${carrera.codigo}`;
+            try {
+                const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, {
+                    headers: { 'X-HAWAII-AUTH': 'jf400fejof13f' }
+                }));
+                avances.push({
+                    carrera: carrera.carrera,
+                    codigo: carrera.codigo,
+                    avances: response.data
+                });
+            }
+            catch (error) {
+                console.error(`Error al obtener avance de ${carrera.codigo}`, error.message);
+                avances.push({
+                    carrera: carrera.carrera,
+                    codigo: carrera.codigo,
+                    avances: [],
+                    error: true
+                });
+            }
+        }
+        return avances;
+    }
 };
 exports.MallaService = MallaService;
 exports.MallaService = MallaService = __decorate([

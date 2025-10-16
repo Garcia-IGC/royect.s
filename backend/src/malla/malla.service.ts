@@ -8,6 +8,14 @@ export interface ResultadoFinal {
   carreras: MallaResultado[];
 }
 
+export interface AvanceCarrera {
+  carrera: string;
+  codigo: string;
+  avances: any[];
+  error?: boolean;
+}
+
+
 @Injectable()
 export class MallaService {
     constructor(private httpService: HttpService) {}
@@ -47,5 +55,37 @@ export class MallaService {
             }
         return resultadoFinal;
 
+    }
+    async obtenerAvance(resultadoFinal: ResultadoFinal): Promise<AvanceCarrera[]> {
+        const avances: AvanceCarrera[] = [];
+
+        for (const carrera of resultadoFinal.carreras) {
+            const url = `https://puclaro.ucn.cl/eross/avance/avance.php?rut=${resultadoFinal.rut}&codcarrera=${carrera.codigo}`;
+            
+            try {
+                const response = await firstValueFrom(
+                    this.httpService.get(url, { 
+                        headers: { 'X-HAWAII-AUTH': 'jf400fejof13f' } 
+                    })
+                );
+                
+                avances.push({
+                    carrera: carrera.carrera,
+                    codigo: carrera.codigo,
+                    avances: response.data
+                });
+
+            } catch (error) {
+                console.error(`Error al obtener avance de ${carrera.codigo}`, error.message);
+                avances.push({
+                    carrera: carrera.carrera,
+                    codigo: carrera.codigo,
+                    avances: [],
+                    error: true
+                });
+            }
+        }
+        
+        return avances;
     }
 }

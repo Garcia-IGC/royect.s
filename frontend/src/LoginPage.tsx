@@ -34,6 +34,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           rut: response.data.rut,
           carreras: response.data.carreras
         };
+        
+        // Guardar en localStorage
+        localStorage.setItem('userData', JSON.stringify(datosUsuario));
+        localStorage.setItem('isLoggedIn', 'true');
+        
         onLogin(datosUsuario);
         navigate('/malla');
         
