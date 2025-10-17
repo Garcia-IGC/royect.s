@@ -1,0 +1,193 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+
+export interface AuthDataDto {
+  rut: string;
+  carreras: CarreraDto[];
+}
+
+export interface CarreraDto {
+    codigo: string;
+    carrera: string;
+    catalogo: string;
+    malla: Asignatura[];
+}
+
+export interface Asignatura {
+  codigo: string;
+  asignatura: string;
+  creditos: number;
+  nivel: number;
+  prereq: string;
+}
+
+interface MallaProps {
+  userData: { rut: string; carreras: any[] } | null;
+}
+
+const Malla: React.FC<MallaProps> = ({ userData }) => {
+
+    const [data, setData] = useState<AuthDataDto | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [hoveredAsignatura, setHoveredAsignatura] = useState<string | null>(null);
+    
+    useEffect(() => {
+        if (!userData) {
+            setLoading(false);
+            return;
+        }
+        
+        setLoading(true);
+        setError('');
+        
+        const payload = {
+          rut: userData.rut,
+          carreras: userData.carreras.map(c => ({
+          codigo: c.codigo,
+          nombre: c.nombre,
+          catalogo: c.catalogo
+        }))
+      };
+        const fetchMallas = async () => {
+            try{
+
+                const response = await axios.post<AuthDataDto>('http://localhost:3000/malla/obtener-mallas',payload);
+                
+                setData(response.data);
+                setLoading(false);
+            }catch (err) {
+                setError('Error al obtener las mallas');
+                setLoading(false);
+                console.error(err);
+            }
+        };
+        fetchMallas();
+    }, [userData]);
+    
+    if (loading) return <p>Cargando mallas...</p>;
+    if (error) return <p>{error}</p>;
+    if (!data) return <p>No hay datos</p>;
+    
+    // Función para obtener nombres de prerequisitos
+    const obtenerNombresPrereq = (codigosPrereq: string, malla: Asignatura[]): string => {
+        if (!codigosPrereq) return '';
+        
+        const codigos = codigosPrereq.split(',').map(c => c.trim());
+        const nombres = codigos.map(codigo => {
+            const asignatura = malla.find(a => a.codigo === codigo);
+            return asignatura ? asignatura.asignatura : codigo;
+        });
+        
+        return nombres.join(', ');
+    };
+
+    function agruparPorSemestre(malla: Asignatura[]) {
+      const semestres: Record<number, Asignatura[]> = {};
+
+      malla.forEach((asig) => {
+        if (!semestres[asig.nivel]) {
+          semestres[asig.nivel] = [];
+        }
+        semestres[asig.nivel].push(asig);
+      });
+
+      // Devolver un array de objetos ordenado por semestre
+      return Object.keys(semestres)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map((nivel) => ({
+          nivel,
+          asignaturas: semestres[nivel],
+        }));
+    }
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+            <div className="max-w-[98%] mx-auto">
+                {/* Título Principal */}
+                <div className="text-center mb-4">
+                    <h1 className="text-3xl font-bold text-gray-800 mb-1">Mallas Curriculares</h1>
+                    <p className="text-sm text-gray-600">RUT: {data.rut}</p>
+                </div>
+
+                {data.carreras.map((carrera, idx) => {
+                    const semestresAgrupados = agruparPorSemestre(carrera.malla);
+
+                    return (
+                        <div key={idx} className="mb-8">
+                            {/* Header de la carrera */}
+                            <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-t-xl p-3 shadow-lg">
+                                <h2 className="text-xl font-bold text-white">
+                                    {carrera.carrera}
+                                </h2>
+                                <p className="text-indigo-100 text-xs mt-0.5">
+                                    Código: {carrera.codigo} | Catálogo: {carrera.catalogo}
+                                </p>
+                            </div>
+
+                            {/* Grid de semestres */}
+                            <div className="bg-white rounded-b-xl shadow-lg p-3 overflow-x-auto">
+                                <div className="flex gap-2 min-w-max">
+                                    {semestresAgrupados.map(({ nivel, asignaturas }) => (
+                                        <div key={nivel} className="flex-shrink-0 w-48">
+                                            {/* Título del semestre */}
+                                            <div className="bg-gradient-to-r from-cyan-500 to-teal-400 rounded-lg p-2 mb-2">
+                                                <h3 className="text-sm font-semibold text-white text-center">
+                                                    Semestre {nivel}
+                                                </h3>
+                                            </div>
+
+                                            {/* Lista de asignaturas */}
+                                            <div className="space-y-2">
+                                                {asignaturas.map((asig, i) => {
+                                                    const asignaturaId = `${idx}-${nivel}-${i}`;
+                                                    const nombresPrereq = obtenerNombresPrereq(asig.prereq, carrera.malla);
+                                                    
+                                                    return (
+                                                        <div 
+                                                            key={i} 
+                                                            className="relative bg-gradient-to-br from-teal-50 to-cyan-50 border-l-4 border-teal-400 rounded-lg p-2.5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-102 cursor-pointer"
+                                                            onMouseEnter={() => setHoveredAsignatura(asignaturaId)}
+                                                            onMouseLeave={() => setHoveredAsignatura(null)}
+                                                        >
+                                                            <div className="flex items-start justify-between mb-1.5">
+                                                                <span className="text-[10px] font-bold text-teal-700 bg-teal-100 px-1.5 py-0.5 rounded">
+                                                                    {asig.codigo}
+                                                                </span>
+                                                                <span className="text-[10px] font-semibold text-gray-600 bg-white px-1.5 py-0.5 rounded shadow-sm">
+                                                                    {asig.creditos} SCT
+                                                                </span>
+                                                            </div>
+                                                            <h4 className="text-xs font-semibold text-gray-800 mb-1 leading-tight">
+                                                                {asig.asignatura}
+                                                            </h4>
+                                                            
+                                                            {/* Tooltip de prerequisitos */}
+                                                            {asig.prereq && hoveredAsignatura === asignaturaId && (
+                                                                <div className="absolute left-full ml-2 top-0 z-50 w-64 bg-white border-2 border-teal-400 rounded-lg shadow-2xl p-3">
+                                                                    <div className="text-xs font-bold text-teal-700 mb-2 border-b border-teal-200 pb-1">
+                                                                        📋 Prerequisitos:
+                                                                    </div>
+                                                                    <div className="text-[11px] text-gray-700 leading-relaxed">
+                                                                        {nombresPrereq}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+export default Malla;

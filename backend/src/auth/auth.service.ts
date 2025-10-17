@@ -20,7 +20,7 @@ export class AuthService {
         try {
             
             const response = await firstValueFrom(
-                this.httpService.get(`https://puclaro.ucn.cl/eross/avance/login.php`, {
+                this.httpService.get('https://puclaro.ucn.cl/eross/avance/login.php', {
                     params: {
                         email,
                         password: pass

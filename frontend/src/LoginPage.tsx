@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+
+import React, { useState } from 'react'; 
+import { useNavigate } from 'react-router-dom';
 import './styles.css'
 import axios from 'axios';
 
 type LoginPageProps = {
-  onLogin: (username: string, password: string) => void;
+  onLogin: (data: any) => void;
 };
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,12 +29,24 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
       } else {
         console.log('Login successful:', response.data);
-        onLogin(username, password);
+
+        const datosUsuario = {
+          rut: response.data.rut,
+          carreras: response.data.carreras
+        };
+        
+        // Guardar en localStorage
+        localStorage.setItem('userData', JSON.stringify(datosUsuario));
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        onLogin(datosUsuario);
+        navigate('/malla');
         
       }
     } catch (err) {
       setError('Error al conectar con el servidor. Asegúrate de que el backend está corriendo.');
     }
+
   };
 
   return (

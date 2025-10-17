@@ -20,7 +20,7 @@ let AuthService = class AuthService {
     }
     async login(email, pass) {
         try {
-            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`https://puclaro.ucn.cl/eross/avance/login.php`, {
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get('https://puclaro.ucn.cl/eross/avance/login.php', {
                 params: {
                     email,
                     password: pass
