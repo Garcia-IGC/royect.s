@@ -20,6 +20,7 @@ export interface Asignatura {
   creditos: number;
   nivel: number;
   prereq: string;
+  cursada: boolean;
 }
 
 interface MallaProps {
@@ -53,7 +54,7 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
         const fetchMallas = async () => {
             try{
 
-                const response = await axios.post<AuthDataDto>('http://localhost:3000/malla/obtener-mallas',payload);
+                const response = await axios.post<AuthDataDto>('http://localhost:3000/malla/malla-avance',payload);
                 
                 setData(response.data);
                 setLoading(false);
@@ -158,7 +159,15 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
                                                                 <span className="text-[10px] font-semibold text-gray-600 bg-white px-1.5 py-0.5 rounded shadow-sm">
                                                                     {asig.creditos} SCT
                                                                 </span>
-                                                            </div>
+                                                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                                                    asig.cursada
+                                                                    ? 'bg-green-100 text-green-700 border border-green-300'
+                                                                    : 'bg-red-100 text-red-700 border border-red-300'
+                                                                }`}
+                                                                >
+                                                                {asig.cursada? 'CURSADO' : 'NO CURSADO'}
+                                                                </span>
+                                                                                                                            </div>
                                                             <h4 className="text-xs font-semibold text-gray-800 mb-1 leading-tight">
                                                                 {asig.asignatura}
                                                             </h4>

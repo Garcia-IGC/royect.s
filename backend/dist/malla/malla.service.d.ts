@@ -15,4 +15,5 @@ export declare class MallaService {
     constructor(httpService: HttpService);
     obtenerMallas(datosAuth: AuthDataDto): Promise<ResultadoFinal>;
     obtenerAvance(resultadoFinal: ResultadoFinal): Promise<AvanceCarrera[]>;
+    combinarMallaYAvance(resultadoFinal: ResultadoFinal): Promise<ResultadoFinal>;
 }

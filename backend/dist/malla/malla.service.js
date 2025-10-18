@@ -19,6 +19,7 @@ let MallaService = class MallaService {
         this.httpService = httpService;
     }
     async obtenerMallas(datosAuth) {
+        console.log('obteniendo mallas');
         const resultadoFinal = {
             rut: datosAuth.rut,
             carreras: []
@@ -49,6 +50,7 @@ let MallaService = class MallaService {
     }
     async obtenerAvance(resultadoFinal) {
         const avances = [];
+        console.log('obteniendo avances');
         for (const carrera of resultadoFinal.carreras) {
             const url = `https://puclaro.ucn.cl/eross/avance/avance.php?rut=${resultadoFinal.rut}&codcarrera=${carrera.codigo}`;
             try {
@@ -72,6 +74,29 @@ let MallaService = class MallaService {
             }
         }
         return avances;
+    }
+    async combinarMallaYAvance(resultadoFinal) {
+        const avances = await this.obtenerAvance(resultadoFinal);
+        for (const carrera of resultadoFinal.carreras) {
+            const avanceCarrera = avances.find(a => a.codigo === carrera.codigo);
+            if (!avanceCarrera || avanceCarrera.error) {
+                carrera.malla = carrera.malla.map(ramo => ({
+                    ...ramo,
+                    status: 'NO CURSADO',
+                    cursada: false
+                }));
+                continue;
+            }
+            carrera.malla = carrera.malla.map(ramo => {
+                const resultadoRamo = avanceCarrera.avances.find(a => a.course === ramo.codigo);
+                return {
+                    ...ramo,
+                    status: resultadoRamo ? 'CURSADO' : 'NO CURSADO',
+                    cursada: resultadoRamo ? true : false
+                };
+            });
+        }
+        return resultadoFinal;
     }
 };
 exports.MallaService = MallaService;

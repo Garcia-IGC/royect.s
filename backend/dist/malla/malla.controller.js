@@ -28,6 +28,11 @@ let MallaController = class MallaController {
         const resultadoMallas = await this.mallaService.obtenerMallas(datosAuth);
         return await this.mallaService.obtenerAvance(resultadoMallas);
     }
+    async obtenerMallaYAvance(datosAuth) {
+        const resultadoMalla = await this.mallaService.obtenerMallas(datosAuth);
+        const resultadoFinal = await this.mallaService.combinarMallaYAvance(resultadoMalla);
+        return resultadoFinal;
+    }
 };
 exports.MallaController = MallaController;
 __decorate([
@@ -44,6 +49,13 @@ __decorate([
     __metadata("design:paramtypes", [auth_data_dto_1.AuthDataDto]),
     __metadata("design:returntype", Promise)
 ], MallaController.prototype, "obtenerAvances", null);
+__decorate([
+    (0, common_1.Post)('malla-avance'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_data_dto_1.AuthDataDto]),
+    __metadata("design:returntype", Promise)
+], MallaController.prototype, "obtenerMallaYAvance", null);
 exports.MallaController = MallaController = __decorate([
     (0, common_1.Controller)('malla'),
     __metadata("design:paramtypes", [malla_service_1.MallaService])

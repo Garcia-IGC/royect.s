@@ -5,4 +5,5 @@ export declare class MallaController {
     constructor(mallaService: MallaService);
     obtenerMallas(datosAuth: AuthDataDto): Promise<import("./malla.service").ResultadoFinal>;
     obtenerAvances(datosAuth: AuthDataDto): Promise<import("./malla.service").AvanceCarrera[]>;
+    obtenerMallaYAvance(datosAuth: AuthDataDto): Promise<import("./malla.service").ResultadoFinal>;
 }

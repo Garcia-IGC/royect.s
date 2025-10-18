@@ -20,7 +20,12 @@ export interface AvanceCarrera {
 export class MallaService {
     constructor(private httpService: HttpService) {}
 
+    
+
     async obtenerMallas(datosAuth: AuthDataDto) {
+
+        console.log('obteniendo mallas')
+        
 
         const resultadoFinal: ResultadoFinal = {
             rut: datosAuth.rut,
@@ -53,15 +58,20 @@ export class MallaService {
                 });
             }
             }
+            
         return resultadoFinal;
 
     }
     async obtenerAvance(resultadoFinal: ResultadoFinal): Promise<AvanceCarrera[]> {
         const avances: AvanceCarrera[] = [];
 
+        console.log('obteniendo avances')
+
         for (const carrera of resultadoFinal.carreras) {
             const url = `https://puclaro.ucn.cl/eross/avance/avance.php?rut=${resultadoFinal.rut}&codcarrera=${carrera.codigo}`;
             
+
+
             try {
                 const response = await firstValueFrom(
                     this.httpService.get(url, { 
@@ -74,6 +84,10 @@ export class MallaService {
                     codigo: carrera.codigo,
                     avances: response.data
                 });
+
+                
+                
+
 
             } catch (error) {
                 console.error(`Error al obtener avance de ${carrera.codigo}`, error.message);
@@ -88,4 +102,45 @@ export class MallaService {
         
         return avances;
     }
+
+    async combinarMallaYAvance(resultadoFinal: ResultadoFinal): Promise<ResultadoFinal> {
+
+    //Obtener los avances
+    const avances = await this.obtenerAvance(resultadoFinal);
+
+
+
+    // Recorre cada carrera dentro de resultadoFinal
+    for (const carrera of resultadoFinal.carreras) {
+        // Busca el avance correspondiente a esta carrera
+        const avanceCarrera = avances.find(a => a.codigo === carrera.codigo);
+
+
+        if (!avanceCarrera || avanceCarrera.error) {
+        // Si no hay datos de la carrera en el avance, marca todos los ramos como no cursados
+            carrera.malla = carrera.malla.map(ramo => ({
+                ...ramo,
+                status: 'NO CURSADO',
+                cursada: false
+            }));
+            continue;
+        }
+
+        // Si hay avance se combina
+        carrera.malla = carrera.malla.map(ramo => {
+        // Buscando el ramo en el avance
+        const resultadoRamo = avanceCarrera.avances.find(a => a.course === ramo.codigo);
+
+        // De momento, si existe es tomado como cursado
+        return {
+            ...ramo,
+            status: resultadoRamo ? 'CURSADO' : 'NO CURSADO',
+            cursada: resultadoRamo ? true:false
+        };
+        });
+    }
+
+    return resultadoFinal;
+}
+
 }
