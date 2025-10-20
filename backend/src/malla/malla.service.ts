@@ -121,23 +121,48 @@ export class MallaService {
             carrera.malla = carrera.malla.map(ramo => ({
                 ...ramo,
                 status: 'NO CURSADO',
-                cursada: false
+                cursada: false,
+                intento:0
             }));
             continue;
         }
 
         // Si hay avance se combina
         carrera.malla = carrera.malla.map(ramo => {
-        // Buscando el ramo en el avance
-        const resultadoRamo = avanceCarrera.avances.find(a => a.course === ramo.codigo);
+        // Buscar *todos* los avances correspondientes al ramo
+        const resultadosRamo = avanceCarrera.avances.filter(a => a.course === ramo.codigo);
 
-        // De momento, si existe es tomado como cursado
+        // Inicializar intento del ramo si no existe
+        if (ramo.intento == null) {
+            ramo.intento = 0;
+        }
+
+        // Si el ramo aparece más de una vez en el avance,
+        // contamos cuántas veces fue APROBADO o REPROBADO
+        let intentos = 0;
+        let statusFinal = 'NO CURSADO';
+
+        if (resultadosRamo.length > 0) {
+            for (const resultado of resultadosRamo) {
+                if (resultado.status === 'APROBADO' || resultado.status === 'REPROBADO') {
+                    intentos += 1;
+                }
+
+                // Nos quedamos con el último estado conocido (puedes ajustarlo según tu lógica)
+                statusFinal = resultado.status;
+            }
+        }
+
+        // Actualizar intento total
+        ramo.intento = intentos;
+
         return {
             ...ramo,
-            status: resultadoRamo ? 'CURSADO' : 'NO CURSADO',
-            cursada: resultadoRamo ? true:false
+            status: statusFinal,
+            cursada: resultadosRamo.length > 0,
         };
-        });
+    });
+
     }
 
     return resultadoFinal;

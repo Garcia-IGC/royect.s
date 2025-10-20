@@ -83,16 +83,31 @@ let MallaService = class MallaService {
                 carrera.malla = carrera.malla.map(ramo => ({
                     ...ramo,
                     status: 'NO CURSADO',
-                    cursada: false
+                    cursada: false,
+                    intento: 0
                 }));
                 continue;
             }
             carrera.malla = carrera.malla.map(ramo => {
-                const resultadoRamo = avanceCarrera.avances.find(a => a.course === ramo.codigo);
+                const resultadosRamo = avanceCarrera.avances.filter(a => a.course === ramo.codigo);
+                if (ramo.intento == null) {
+                    ramo.intento = 0;
+                }
+                let intentos = 0;
+                let statusFinal = 'NO CURSADO';
+                if (resultadosRamo.length > 0) {
+                    for (const resultado of resultadosRamo) {
+                        if (resultado.status === 'APROBADO' || resultado.status === 'REPROBADO') {
+                            intentos += 1;
+                        }
+                        statusFinal = resultado.status;
+                    }
+                }
+                ramo.intento = intentos;
                 return {
                     ...ramo,
-                    status: resultadoRamo ? 'CURSADO' : 'NO CURSADO',
-                    cursada: resultadoRamo ? true : false
+                    status: statusFinal,
+                    cursada: resultadosRamo.length > 0,
                 };
             });
         }

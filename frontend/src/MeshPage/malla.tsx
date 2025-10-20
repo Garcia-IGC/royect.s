@@ -20,7 +20,8 @@ export interface Asignatura {
   creditos: number;
   nivel: number;
   prereq: string;
-  cursada: boolean;
+  status: string;
+  intento: number;
 }
 
 interface MallaProps {
@@ -160,12 +161,15 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
                                                                     {asig.creditos} SCT
                                                                 </span>
                                                                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                                                    asig.cursada
+                                                                    asig.status === 'APROBADO' || asig.status === 'INSCRITO'
                                                                     ? 'bg-green-100 text-green-700 border border-green-300'
                                                                     : 'bg-red-100 text-red-700 border border-red-300'
                                                                 }`}
                                                                 >
-                                                                {asig.cursada? 'CURSADO' : 'NO CURSADO'}
+                                                                <span className= "text-[10px] font-semibold px-2 py-0.5 roundedofull">
+                                                                    {asig.intento}
+                                                                </span>
+                                                                {asig.status}
                                                                 </span>
                                                                                                                             </div>
                                                             <h4 className="text-xs font-semibold text-gray-800 mb-1 leading-tight">
