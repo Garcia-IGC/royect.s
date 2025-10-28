@@ -71,7 +71,11 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
     fetchMallas();
   }, [userData]);
 
-  if (loading) return <p>Cargando mallas...</p>;
+  if (loading) return <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white/90 backdrop-blur rounded-xl shadow px-4 py-3 text-sm text-gray-700">
+          Cargando mallas…
+        </div>
+      </div>;
   if (error) return <p>{error}</p>;
   if (!data) return <p>No hay datos</p>;
 
