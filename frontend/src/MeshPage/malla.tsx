@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import SimuladorAvance from './SimuladorAvance'; 
 
 export interface AuthDataDto {
   rut: string;
@@ -33,7 +34,8 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
   const [error, setError] = useState('');
   const [hoveredAsignatura, setHoveredAsignatura] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [view, setView] = useState<'avance' | 'cursados' | 'proyeccion'>('avance');
+  const [view, setView] = useState<'avance' | 'cursados' | 'proyeccion'| 'simulador'>('avance');
+  
 
   useEffect(() => {
     if (!userData) {
@@ -71,7 +73,11 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
     fetchMallas();
   }, [userData]);
 
-  if (loading) return <p>Cargando mallas...</p>;
+  if (loading) return <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white/90 backdrop-blur rounded-xl shadow px-4 py-3 text-sm text-gray-700">
+          Cargando mallas…
+        </div>
+      </div>;
   if (error) return <p>{error}</p>;
   if (!data) return <p>No hay datos</p>;
 
@@ -162,6 +168,20 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
           >
             Proyección
           </button>
+
+          <button
+            onClick={() => {
+              setView('simulador');   
+              setSidebarOpen(false);
+            }}
+            className={`w-full text-left text-sm px-3 py-2 rounded border ${
+              view === 'simulador'
+                ? 'bg-indigo-600 text-white border-indigo-600'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200'
+            }`}
+          >
+            Simulador de avance
+          </button>
         </nav>
       </div>
 
@@ -206,7 +226,7 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
                   </div>
 
                   {/* Grid de semestres */}
-                  <div className="bg-white rounded-b-xl shadow-lg p-3 overflow-x-auto">
+                  <div className="bg-white rounded-b-xl shadow-lg p-3 overflow-x-auto overflow-y-visible relative isolate">
                     <div className="flex gap-2 min-w-max">
                       {semestresAgrupados.map(({ nivel, asignaturas }) => (
                         <div key={nivel} className="flex-shrink-0 w-48">
@@ -228,7 +248,7 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
                               return (
                                 <div
                                   key={i}
-                                  className="relative bg-gradient-to-br from-teal-50 to-cyan-50 border-l-4 border-teal-400 rounded-lg p-2.5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-102 cursor-pointer"
+                                  className="relative z-10 bg-gradient-to-br from-teal-50 to-cyan-50 border-l-4 border-teal-400 rounded-lg p-2.5 shadow-md hover:shadow-lg hover:z-20 transition-all duration-200 hover:scale-105 cursor-pointer"
                                   onMouseEnter={() => setHoveredAsignatura(asignaturaId)}
                                   onMouseLeave={() => setHoveredAsignatura(null)}
                                 >
@@ -259,7 +279,7 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
 
                                   {/* Tooltip de prerequisitos */}
                                   {asig.prereq && hoveredAsignatura === asignaturaId && (
-                                    <div className="absolute left-full ml-2 top-0 z-50 w-64 bg-white border-2 border-teal-400 rounded-lg shadow-2xl p-3">
+                                    <div className="absolute left-full ml-2 top-0 z-[999] w-64 bg-white border-2 border-teal-400 rounded-lg shadow-2xl p-3">
                                       <div className="text-xs font-bold text-teal-700 mb-2 border-b border-teal-200 pb-1">
                                         📋 Prerequisitos:
                                       </div>
@@ -383,6 +403,12 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
             })}
           </>
         )}
+
+        {/* --- Vista: Simulador --- */}
+        {view === 'simulador' && (
+          <SimuladorAvance data={data} />   // <-- NUEVO
+        )}
+
       </div>
     </div>
   );

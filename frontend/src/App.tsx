@@ -35,7 +35,7 @@ const App: React.FC = () => {
 
     // Mostrar loading mientras verifica la sesión
     if (loading) {
-        return <div>Cargando...</div>;
+        return <div className = "text-center">Cargando...</div>;
     }
 
     return (
@@ -47,10 +47,7 @@ const App: React.FC = () => {
                         isLoggedIn ? (
                             <Navigate to="/malla" replace />
                         ) : (
-                            <div className='contenedorBody'>
-                                <h1 className='tituloInicio'>Inicio de Sesión</h1>
                                 <LoginPage onLogin={handleLogin} />
-                            </div>
                         )
                     } 
                 />
