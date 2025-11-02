@@ -8,13 +8,15 @@ datasource db {
 }
 
 model Alumno {
-  id_alumno  Int     @id @default(autoincrement())
+  id_alumno  Int     @id 
   proyecciones Proyeccion[]
 }
 
 model Proyeccion{
     id_proyeccion   Int @id @default(autoincrement())
     id_alumno Int 
+    codigo String
+    nombre String
     alumno Alumno @relation(fields: [id_alumno],references: [id_alumno])
     semestres Semestre[]
 }
@@ -35,7 +37,7 @@ model Ramo{
   id_semestre Int
   semestre Semestre @relation(fields: [id_semestre],references: [id_semestre])
   codigo String
-  asigantura String
+  asignatura String
   creditos Int
   nivel Int
   prereq String

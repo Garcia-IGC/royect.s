@@ -13,14 +13,17 @@ const app_service_1 = require("./app.service");
 const auth_module_1 = require("./auth/auth.module");
 const axios_1 = require("@nestjs/axios");
 const malla_module_1 = require("./malla/malla.module");
+const prisma_module_1 = require("./prisma/prisma.module");
+const proyeccion_module_1 = require("./proyeccion/proyeccion.module");
+const prisma_service_1 = require("./prisma/prisma.service");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [auth_module_1.AuthModule, axios_1.HttpModule, malla_module_1.MallaModule],
+        imports: [auth_module_1.AuthModule, axios_1.HttpModule, malla_module_1.MallaModule, prisma_module_1.PrismaModule, proyeccion_module_1.ProyeccionModule],
         controllers: [app_controller_1.AppController],
-        providers: [app_service_1.AppService],
+        providers: [app_service_1.AppService, prisma_service_1.PrismaService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

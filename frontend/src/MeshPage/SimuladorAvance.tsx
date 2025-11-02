@@ -1,4 +1,5 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
+import axios from 'axios';
 
 type Asignatura = {
   codigo: string;
@@ -24,26 +25,32 @@ export type AuthDataDto = {
 
 type Props = {
   data: AuthDataDto;
-  onSave?: (plan: Record<string, Record<number, string[]>>) => void; 
+  onSave?: (plan: Record<string, Record<number, string[]>>) => void;
 };
 
 const SimuladorAvance: React.FC<Props> = ({ data, onSave }) => {
-  type Plan = Record<number, string[]>;        // nivel -> [codigos]
+  type Plan = Record<number, string[]>; // nivel -> [codigos]
   const [planPorCarrera, setPlanPorCarrera] = useState<Record<string, Plan>>({});
   const [editandoCarrera, setEditandoCarrera] = useState<string | null>(null);
+  const [nivelesExtra, setNivelesExtra] = useState<Record<string, number[]>>({});
 
+  /** Solo asignaturas no cursadas ni aprobadas */
+  const noCursada = (a: Asignatura) => a.status !== 'APROBADO' && a.status !== 'INSCRITO';
+
+  /** Agrupa solo las no cursadas por semestre */
   const agruparPorSemestre = (malla: Asignatura[]) => {
     const sem: Record<number, Asignatura[]> = {};
-    malla.forEach((a) => {
-      (sem[a.nivel] ||= []).push(a);
-    });
+    malla
+      .filter(noCursada)
+      .forEach((a) => {
+        (sem[a.nivel] ||= []).push(a);
+      });
+
     return Object.keys(sem)
       .map(Number)
       .sort((a, b) => a - b)
       .map((nivel) => ({ nivel, asignaturas: sem[nivel] }));
   };
-
-  const noCursada = (a: Asignatura) => a.status !== 'APROBADO' && a.status !== 'INSCRITO';
 
   const parsePrereq = (s: string) =>
     (s || '')
@@ -82,7 +89,7 @@ const SimuladorAvance: React.FC<Props> = ({ data, onSave }) => {
     if (!codigo) return;
     const planActual = planPorCarrera[codCarrera] ?? {};
     const asig = malla.find((a) => a.codigo === codigo);
-    const yaEnPlan = Object.values(planActual).some(arr => (arr ?? []).includes(codigo));
+    const yaEnPlan = Object.values(planActual).some((arr) => (arr ?? []).includes(codigo));
     if (yaEnPlan) return;
     if (!asig) return;
     if (!cumplePrereq(asig, planActual, nivel, malla)) {
@@ -109,13 +116,68 @@ const SimuladorAvance: React.FC<Props> = ({ data, onSave }) => {
   const cancelar = (codCarrera: string) => {
     setPlanPorCarrera((prev) => ({ ...prev, [codCarrera]: {} }));
     setEditandoCarrera(null);
+    setNivelesExtra((prev) => ({ ...prev, [codCarrera]: [] }));
   };
 
-  const guardar = (codCarrera: string) => {
-    const plan = planPorCarrera[codCarrera] ?? {};
-    console.log('Simulador (no se persiste):', { rut: data.rut, carrera: codCarrera, plan });
-    onSave?.({ [codCarrera]: plan });
+  const guardar = async (codCarrera: string) => {
+  const plan = planPorCarrera[codCarrera] ?? {};
+
+  // Encontrar info de la carrera seleccionada
+  const carrera = data.carreras.find((c) => c.codigo === codCarrera);
+  if (!carrera) return;
+
+  try {
+    const payload = {
+      rut: data.rut,
+      codigo: carrera.codigo,
+      carrera: carrera.carrera,
+      plan: Object.fromEntries(
+        Object.entries(plan).map(([nivel, codigos]) => [
+          nivel,
+          codigos.map((codigo) => {
+            const asig = carrera.malla.find((a) => a.codigo === codigo);
+            return {
+              codigo: asig?.codigo ?? codigo,
+              asignatura: asig?.asignatura ?? '',
+              creditos: asig?.creditos ?? 0,
+              nivel: asig?.nivel ?? Number(nivel),
+              prereq: asig?.prereq ?? '',
+              intento: asig?.intento ?? 1,
+              status: asig?.status ?? 'NO CURSADO',
+              cursada: asig?.status === 'INSCRITO' || asig?.status === 'APROBADO',
+            };
+          }),
+        ])
+      ),
+    };
+
+    // Llamada al backend
+    const response = await axios.post('http://localhost:3000/proyeccion/guardar', payload);
+
+    console.log('✅ Proyección guardada correctamente:', response.data);
+
+    // Limpia el estado y cierra edición
     setEditandoCarrera(null);
+  } catch (err) {
+    console.error('❌ Error al guardar la proyección:', err);
+    alert('Error al guardar la proyección. Revisa la consola para más detalles.');
+  }
+};
+
+  /**
+   * Agrega un semestre proyectado para la carrera.
+   * Recibe además `nivelesVisibles` (array de números con todos los niveles ya visibles)
+   * para calcular correctamente el siguiente nivel (max + 1).
+   */
+  const agregarSemestre = (codCarrera: string, nivelesVisibles: number[]) => {
+    setNivelesExtra((prev) => {
+      const actuales = prev[codCarrera] ?? [];
+      const todos = [...new Set([...nivelesVisibles, ...actuales])]; // únicos
+      const siguiente = todos.length > 0 ? Math.max(...todos) + 1 : 1;
+      // evitar duplicados si ya existe
+      const nuevo = Array.from(new Set([...actuales, siguiente])).sort((a, b) => a - b);
+      return { ...prev, [codCarrera]: nuevo };
+    });
   };
 
   const nombreAsignatura = (malla: Asignatura[], codigo: string) =>
@@ -133,7 +195,19 @@ const SimuladorAvance: React.FC<Props> = ({ data, onSave }) => {
         const enEdicion = editandoCarrera === carrera.codigo;
         const planActual = planPorCarrera[carrera.codigo] ?? {};
         const totalSel = Object.values(planActual).reduce((acc, v) => acc + (v?.length ?? 0), 0);
+
         const semestres = agruparPorSemestre(carrera.malla);
+        const nivelesActuales = semestres.map((s) => s.nivel);
+        const nivelesProyectados = Object.keys(planActual)
+          .map(Number)
+          .filter((n) => !nivelesActuales.includes(n));
+
+        const extra = nivelesExtra[carrera.codigo] ?? [];
+        const niveles = [...nivelesActuales, ...nivelesProyectados, ...extra]
+          .filter((n, i, arr) => arr.indexOf(n) === i) // únicos
+          .sort((a, b) => a - b);
+
+        if (niveles.length === 0) niveles.push(1);
 
         return (
           <div key={idx} className="mb-8">
@@ -173,13 +247,17 @@ const SimuladorAvance: React.FC<Props> = ({ data, onSave }) => {
               </div>
             </div>
 
-            {/* Secciones por semestre (vacías al inicio) */}
+            {/* Secciones por semestre */}
             <div className="bg-white rounded-b-xl shadow-lg p-3 overflow-x-auto">
               <div className="flex gap-2 min-w-max">
-                {semestres.map(({ nivel, asignaturas }) => {
+                {niveles.map((nivel) => {
+                  const asignaturas = semestres.find((s) => s.nivel === nivel)?.asignaturas ?? [];
                   const seleccionadas = planActual[nivel] ?? [];
                   const yaSeleccionadasGlobal = new Set(
-                    Object.values(planActual).reduce<string[]>((acc, a) => acc.concat(a ?? []), [])
+                    Object.values(planActual).reduce<string[]>(
+                      (acc, a) => acc.concat(a ?? []),
+                      []
+                    )
                   );
                   const opcionesDisponibles = carrera.malla
                     .filter(noCursada)
@@ -189,10 +267,12 @@ const SimuladorAvance: React.FC<Props> = ({ data, onSave }) => {
                   return (
                     <div key={nivel} className="flex-shrink-0 w-64">
                       <div className="bg-gradient-to-r from-cyan-500 to-teal-400 rounded-lg p-2 mb-2">
-                        <h3 className="text-sm font-semibold text-white text-center">Semestre {nivel}</h3>
+                        <h3 className="text-sm font-semibold text-white text-center">
+                          Semestre {nivel}
+                        </h3>
                       </div>
 
-                      {/* Lista de seleccionadas (chips) */}
+                      {/* Lista de seleccionadas */}
                       <div className="space-y-2">
                         {seleccionadas.length === 0 && (
                           <div className="text-[12px] text-gray-500 bg-gray-50 border border-dashed border-gray-300 rounded p-2 text-center">
@@ -227,12 +307,14 @@ const SimuladorAvance: React.FC<Props> = ({ data, onSave }) => {
                       {/* Selector para agregar (solo en edición) */}
                       {enEdicion && (
                         <div className="mt-2">
-                          <label className="block text-[11px] text-gray-600 mb-1">Agregar asignatura</label>
+                          <label className="block text-[11px] text-gray-600 mb-1">
+                            Agregar asignatura
+                          </label>
                           <select
                             className="w-full text-sm border rounded-lg px-2 py-1.5 bg-white"
                             onChange={(e) => {
                               addSeleccion(carrera.codigo, nivel, e.target.value, carrera.malla);
-                              e.currentTarget.selectedIndex = 0; 
+                              e.currentTarget.selectedIndex = 0;
                             }}
                           >
                             <option value="">Selecciona…</option>
@@ -243,13 +325,26 @@ const SimuladorAvance: React.FC<Props> = ({ data, onSave }) => {
                             ))}
                           </select>
                           {opcionesDisponibles.length === 0 && (
-                            <p className="mt-1 text-[11px] text-gray-400">No hay más asignaturas disponibles.</p>
+                            <p className="mt-1 text-[11px] text-gray-400">
+                              No hay más asignaturas disponibles.
+                            </p>
                           )}
                         </div>
                       )}
                     </div>
                   );
                 })}
+
+                {/* Botón para agregar nuevo semestre */}
+                {enEdicion && (
+                  <button
+                    onClick={() => agregarSemestre(carrera.codigo, niveles)}
+                    className="flex-shrink-0 w-64 h-32 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 hover:text-gray-600 hover:border-gray-400 flex flex-col items-center justify-center transition"
+                  >
+                    <span className="text-3xl">＋</span>
+                    <span className="text-sm mt-1">Agregar semestre</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
