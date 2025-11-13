@@ -44,6 +44,13 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
       return;
     }
 
+    // Validar que userData.carreras exista y sea un array
+    if (!userData.carreras || !Array.isArray(userData.carreras)) {
+      setLoading(false);
+      setError('No se encontraron carreras para este usuario');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
