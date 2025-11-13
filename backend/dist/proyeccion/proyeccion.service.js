@@ -54,6 +54,65 @@ let ProyeccionService = class ProyeccionService {
         });
         return proyeccion;
     }
+    async obtenerProyeccionesPorRut(rut) {
+        const alumno = await this.prisma.alumno.findUnique({
+            where: { id_alumno: parseInt(rut) },
+            include: {
+                proyecciones: {
+                    include: {
+                        semestres: {
+                            include: {
+                                ramos: true,
+                            },
+                            orderBy: {
+                                semestre: 'asc',
+                            },
+                        },
+                    },
+                    orderBy: {
+                        id_proyeccion: 'desc',
+                    },
+                },
+            },
+        });
+        if (!alumno) {
+            return [];
+        }
+        return alumno.proyecciones;
+    }
+    async obtenerProyeccionPorId(id) {
+        const proyeccion = await this.prisma.proyeccion.findUnique({
+            where: { id_proyeccion: id },
+            include: {
+                semestres: {
+                    include: {
+                        ramos: true,
+                    },
+                    orderBy: {
+                        semestre: 'asc',
+                    },
+                },
+            },
+        });
+        return proyeccion;
+    }
+    async eliminarProyeccion(id) {
+        const semestres = await this.prisma.semestre.findMany({
+            where: { id_proyeccion: id },
+            select: { id_semestre: true },
+        });
+        for (const semestre of semestres) {
+            await this.prisma.ramo.deleteMany({
+                where: { id_semestre: semestre.id_semestre },
+            });
+        }
+        await this.prisma.semestre.deleteMany({
+            where: { id_proyeccion: id },
+        });
+        return await this.prisma.proyeccion.delete({
+            where: { id_proyeccion: id },
+        });
+    }
 };
 exports.ProyeccionService = ProyeccionService;
 exports.ProyeccionService = ProyeccionService = __decorate([

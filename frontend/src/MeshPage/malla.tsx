@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import SimuladorAvance from './SimuladorAvance'; 
+import MostradorAvances from './MostradorAvances'; 
 
 export interface AuthDataDto {
   rut: string;
@@ -34,7 +35,7 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
   const [error, setError] = useState('');
   const [hoveredAsignatura, setHoveredAsignatura] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [view, setView] = useState<'avance' | 'cursados' | 'proyeccion'| 'simulador'>('avance');
+  const [view, setView] = useState<'avance' | 'cursados' | 'proyeccion'| 'simulador' | 'guardadas'>('avance');
   
 
   useEffect(() => {
@@ -181,6 +182,20 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
             }`}
           >
             Simulador de avance
+          </button>
+
+          <button
+            onClick={() => {
+              setView('guardadas');   
+              setSidebarOpen(false);
+            }}
+            className={`w-full text-left text-sm px-3 py-2 rounded border ${
+              view === 'guardadas'
+                ? 'bg-indigo-600 text-white border-indigo-600'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200'
+            }`}
+          >
+            📚 Proyecciones Guardadas
           </button>
         </nav>
       </div>
@@ -407,6 +422,11 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
         {/* --- Vista: Simulador --- */}
         {view === 'simulador' && (
           <SimuladorAvance data={data} />   // <-- NUEVO
+        )}
+
+        {/* --- Vista: Proyecciones Guardadas --- */}
+        {view === 'guardadas' && data && (
+          <MostradorAvances rut={data.rut} />
         )}
 
       </div>

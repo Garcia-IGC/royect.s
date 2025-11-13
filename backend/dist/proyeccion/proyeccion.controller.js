@@ -24,6 +24,18 @@ let ProyeccionController = class ProyeccionController {
         console.log('📩 POST /proyeccion/guardar recibido');
         return this.proyeccionService.guardarProyeccion(data);
     }
+    async obtenerPorRut(rut) {
+        console.log('📩 GET /proyeccion/obtener/' + rut);
+        return this.proyeccionService.obtenerProyeccionesPorRut(rut);
+    }
+    async obtenerPorId(id) {
+        console.log('📩 GET /proyeccion/detalle/' + id);
+        return this.proyeccionService.obtenerProyeccionPorId(parseInt(id));
+    }
+    async eliminar(id) {
+        console.log('📩 DELETE /proyeccion/eliminar/' + id);
+        return this.proyeccionService.eliminarProyeccion(parseInt(id));
+    }
 };
 exports.ProyeccionController = ProyeccionController;
 __decorate([
@@ -33,6 +45,27 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ProyeccionController.prototype, "guardar", null);
+__decorate([
+    (0, common_1.Get)('obtener/:rut'),
+    __param(0, (0, common_1.Param)('rut')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], ProyeccionController.prototype, "obtenerPorRut", null);
+__decorate([
+    (0, common_1.Get)('detalle/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], ProyeccionController.prototype, "obtenerPorId", null);
+__decorate([
+    (0, common_1.Delete)('eliminar/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], ProyeccionController.prototype, "eliminar", null);
 exports.ProyeccionController = ProyeccionController = __decorate([
     (0, common_1.Controller)('proyeccion'),
     __metadata("design:paramtypes", [proyeccion_service_1.ProyeccionService])
