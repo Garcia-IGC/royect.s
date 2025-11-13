@@ -21,7 +21,12 @@ export class MallaService {
     constructor(private httpService: HttpService) {}
 
     
-
+    /*
+    * obtenerMallas
+    * @parametros: datosAuth: AuthDataDto
+    * @retorno: retorna como resultado la malla o las malla del alumno correspondiente
+    * Esta función  atravez de API-REST obtiene los datos de el end-point de las mallas
+    */
     async obtenerMallas(datosAuth: AuthDataDto) {
 
         console.log('obteniendo mallas')
@@ -33,8 +38,11 @@ export class MallaService {
             };
 
         for (const carrera of datosAuth.carreras) {
+            //Endpoint a consultar los datos de malla
             const url = `https://losvilos.ucn.cl/hawaii/api/mallas?${carrera.codigo}-${carrera.catalogo}`;
 
+
+            //Transacción para la obtencion de los datos
             try {
                 const response = await firstValueFrom(
                 this.httpService.get(url, { headers: { 'X-HAWAII-AUTH': 'jf400fejof13f' }})
@@ -46,7 +54,7 @@ export class MallaService {
                     catalogo: carrera.catalogo,
                     malla: response.data,   
                 });
-
+            // Error en caso de que la transacción no pueda ser realizada con exito
             } catch (error) {
                 console.error(`Error al obtener malla de ${carrera.codigo}-${carrera.catalogo}`, error.message);
                 resultadoFinal.carreras.push({
@@ -62,16 +70,27 @@ export class MallaService {
         return resultadoFinal;
 
     }
+
+    /*
+    * obtenerAvance
+    * @parametros: resultadoFinal (malla o mallas de el alumno objetivo)
+    * @retorno: retorna todos los avances del alumno correspondiente separandolos por carrera y codigo
+    * con su respectivo avance (Aprobados, reprobados, inscripciónes, entre otros utiles datos)
+    * Esta función  atravez de API-REST obtiene los datos de el avance de el alumno 
+    * con el end-point de avances
+    */
     async obtenerAvance(resultadoFinal: ResultadoFinal): Promise<AvanceCarrera[]> {
         const avances: AvanceCarrera[] = [];
 
         console.log('obteniendo avances')
 
+        
         for (const carrera of resultadoFinal.carreras) {
+            //endpoint para los avances
             const url = `https://puclaro.ucn.cl/eross/avance/avance.php?rut=${resultadoFinal.rut}&codcarrera=${carrera.codigo}`;
             
 
-
+            //transaccion para asegurar el envio de todos o ningun dato
             try {
                 const response = await firstValueFrom(
                     this.httpService.get(url, { 
@@ -103,6 +122,16 @@ export class MallaService {
         return avances;
     }
 
+
+    /*
+    * combinarMallaYAvance
+    * @parametros: resultadoFinal (malla o mallas de el alumno objetivo)
+    * @retorno: retorna la malla completa del alumno con sus respectivos avances en cada una de estas
+    * (Aprobados, reprobados, inscripciónes, entre otros utiles datos)
+    * Esta función  utiliza ambas funciones previamente documentadas, primero para obtener las mallas, luego los avances
+    * y finalmente lo que la funcion hace es calificar los ramos que se han dado con su status y la cantidad
+    * de veces que estos se han cursado, si el ramo no se encuentra en los avances se marca como  NO CURSADO
+    */
     async combinarMallaYAvance(resultadoFinal: ResultadoFinal): Promise<ResultadoFinal> {
 
     //Obtener los avances
@@ -129,16 +158,15 @@ export class MallaService {
 
         // Si hay avance se combina
         carrera.malla = carrera.malla.map(ramo => {
-        // Buscar *todos* los avances correspondientes al ramo
+        // Buscar todos los avances correspondientes al ramo
         const resultadosRamo = avanceCarrera.avances.filter(a => a.course === ramo.codigo);
 
-        // Inicializar intento del ramo si no existe
+        // Inicializar intento del ramo si no existe (representa la cantidad de veces que se ha cursado el ramo)
         if (ramo.intento == null) {
             ramo.intento = 0;
         }
 
-        // Si el ramo aparece más de una vez en el avance,
-        // contamos cuántas veces fue APROBADO o REPROBADO
+        // Si el ramo aparece más de una vez en el avance, se cuenta cuántas veces realizado (aprobado o reprobado)
         let intentos = 0;
         let statusFinal = 'NO CURSADO';
 
@@ -148,12 +176,12 @@ export class MallaService {
                     intentos += 1;
                 }
 
-                // Nos quedamos con el último estado conocido (puedes ajustarlo según tu lógica)
+                // El ultimo estatus del ramo es el que corresponde
                 statusFinal = resultado.status;
             }
         }
 
-        // Actualizar intento total
+        // Actualizar intento total para proyeccion posterior
         ramo.intento = intentos;
 
         return {
