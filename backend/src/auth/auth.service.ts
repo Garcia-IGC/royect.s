@@ -16,7 +16,13 @@ export interface LoginResponse {
 export class AuthService {
   constructor(private httpService: HttpService) {}
 
+  /*
+  * login()
+  * funcion utilizada para autenticar los datos ingresados, email y contraseña
+  * utiliza el endpoint de login
+  */
   async login(email: string, pass: string): Promise<LoginResponse> {
+        //transaccion para login usando endpoint
         try {
             
             const response = await firstValueFrom(

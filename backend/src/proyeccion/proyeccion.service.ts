@@ -5,21 +5,28 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ProyeccionService {
   constructor(private prisma: PrismaService) {}
 
+  /*
+  * guardarProyeccion()
+  * Funcion utilizada para guardar los datos realizados en una proyeccion
+  * dentro de la base de datos
+  *
+  */
   async guardarProyeccion(data: any) {
     const { rut, carrera, codigo, plan } = data;
 
-    // Buscar o crear alumno
+    // Busca al alumno con el rut otorgado
     let alumno = await this.prisma.alumno.findUnique({
       where: { id_alumno: parseInt(rut) },
     });
 
+    // si no existe lo crea en la bd
     if (!alumno) {
       alumno = await this.prisma.alumno.create({
         data: { id_alumno: parseInt(rut) },
       });
     }
 
-    // Crear proyección con sus semestres y ramos
+    // Crea la respectiva proyeccion con sus semestres y ramos
     const proyeccion = await this.prisma.proyeccion.create({
       data: {
         id_alumno: alumno.id_alumno,
@@ -31,7 +38,6 @@ export class ProyeccionService {
             ramos: {
               create: ramos.map((r) => ({
                 codigo: r.codigo,
-                // ⚠️ usa 'asignatura' o 'asigantura' según tu modelo
                 asignatura: r.asignatura,
                 creditos: r.creditos ?? 0,
                 nivel: r.nivel ?? 0,
@@ -50,6 +56,12 @@ export class ProyeccionService {
     return proyeccion;
   }
 
+  /*
+  * obtenerProyeccionesPorRut()
+  * Funcion utilizada para cargar los datos de proyecciones de un alumno x
+  * dentro de la base de datos
+  *
+  */
   async obtenerProyeccionesPorRut(rut: string) {
     const alumno = await this.prisma.alumno.findUnique({
       where: { id_alumno: parseInt(rut) },

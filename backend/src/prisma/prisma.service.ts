@@ -3,9 +3,10 @@ import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+
+  //conexion con prisma para la base de datos
   async onModuleInit() {
     await this.$connect();
-    console.log('✅ Conectado a la base de datos PostgreSQL con Prisma');
   }
 
   async onModuleDestroy() {
