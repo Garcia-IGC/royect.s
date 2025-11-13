@@ -97,20 +97,16 @@ let ProyeccionService = class ProyeccionService {
         return proyeccion;
     }
     async eliminarProyeccion(id) {
-        const semestres = await this.prisma.semestre.findMany({
-            where: { id_proyeccion: id },
-            select: { id_semestre: true },
-        });
-        for (const semestre of semestres) {
-            await this.prisma.ramo.deleteMany({
-                where: { id_semestre: semestre.id_semestre },
+        await this.prisma.$transaction(async (tx) => {
+            const semestres = await tx.semestre.findMany({
+                where: { id_proyeccion: id },
+                select: { id_semestre: true },
             });
-        }
-        await this.prisma.semestre.deleteMany({
-            where: { id_proyeccion: id },
-        });
-        return await this.prisma.proyeccion.delete({
-            where: { id_proyeccion: id },
+            for (const s of semestres) {
+                await tx.ramo.deleteMany({ where: { id_semestre: s.id_semestre } });
+            }
+            await tx.semestre.deleteMany({ where: { id_proyeccion: id } });
+            await tx.proyeccion.delete({ where: { id_proyeccion: id } });
         });
     }
 };

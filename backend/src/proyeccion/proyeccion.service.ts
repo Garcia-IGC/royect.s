@@ -110,27 +110,20 @@ export class ProyeccionService {
   }
 
   async eliminarProyeccion(id: number) {
-    // Primero obtener todos los semestres de la proyección
-    const semestres = await this.prisma.semestre.findMany({
-      where: { id_proyeccion: id },
-      select: { id_semestre: true },
+    await this.prisma.$transaction(async (tx) => {
+    const semestres = await tx.semestre.findMany({
+    where: { id_proyeccion: id },
+    select: { id_semestre: true },
     });
 
-    // Eliminar todos los ramos de cada semestre
-    for (const semestre of semestres) {
-      await this.prisma.ramo.deleteMany({
-        where: { id_semestre: semestre.id_semestre },
-      });
+    for (const s of semestres) {
+      await tx.ramo.deleteMany({ where: { id_semestre: s.id_semestre } });
     }
 
-    // Eliminar todos los semestres
-    await this.prisma.semestre.deleteMany({
-      where: { id_proyeccion: id },
+    await tx.semestre.deleteMany({ where: { id_proyeccion: id } });
+
+    await tx.proyeccion.delete({ where: { id_proyeccion: id } });
     });
 
-    // Finalmente eliminar la proyección
-    return await this.prisma.proyeccion.delete({
-      where: { id_proyeccion: id },
-    });
   }
 }
