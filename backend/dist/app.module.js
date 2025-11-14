@@ -16,12 +16,13 @@ const malla_module_1 = require("./malla/malla.module");
 const prisma_module_1 = require("./prisma/prisma.module");
 const proyeccion_module_1 = require("./proyeccion/proyeccion.module");
 const prisma_service_1 = require("./prisma/prisma.service");
+const config_1 = require("@nestjs/config");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [auth_module_1.AuthModule, axios_1.HttpModule, malla_module_1.MallaModule, prisma_module_1.PrismaModule, proyeccion_module_1.ProyeccionModule],
+        imports: [auth_module_1.AuthModule, axios_1.HttpModule, malla_module_1.MallaModule, prisma_module_1.PrismaModule, proyeccion_module_1.ProyeccionModule, config_1.ConfigModule.forRoot({ isGlobal: true }),],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService, prisma_service_1.PrismaService],
     })

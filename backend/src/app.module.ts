@@ -7,9 +7,10 @@ import { MallaModule } from './malla/malla.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProyeccionModule } from './proyeccion/proyeccion.module'; // el tuyo
 import { PrismaService } from './prisma/prisma.service';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [AuthModule, HttpModule, MallaModule,PrismaModule,ProyeccionModule],
+  imports: [AuthModule, HttpModule, MallaModule,PrismaModule,ProyeccionModule,ConfigModule.forRoot({isGlobal: true }),],
   controllers: [AppController],
   providers: [AppService,PrismaService],
 })

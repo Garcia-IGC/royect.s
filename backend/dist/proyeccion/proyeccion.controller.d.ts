@@ -17,15 +17,15 @@ export declare class ProyeccionController {
                 id_ramo: number;
             }[];
         } & {
-            id_proyeccion: number;
             semestre: number;
+            id_proyeccion: number;
             id_semestre: number;
         })[];
     } & {
         codigo: string;
+        id_alumno: number;
         nombre: string;
         id_proyeccion: number;
-        id_alumno: number;
     }>;
     obtenerPorRut(rut: string): Promise<({
         semestres: ({
@@ -42,15 +42,15 @@ export declare class ProyeccionController {
                 id_ramo: number;
             }[];
         } & {
-            id_proyeccion: number;
             semestre: number;
+            id_proyeccion: number;
             id_semestre: number;
         })[];
     } & {
         codigo: string;
+        id_alumno: number;
         nombre: string;
         id_proyeccion: number;
-        id_alumno: number;
     })[]>;
     obtenerPorId(id: string): Promise<({
         semestres: ({
@@ -67,15 +67,15 @@ export declare class ProyeccionController {
                 id_ramo: number;
             }[];
         } & {
-            id_proyeccion: number;
             semestre: number;
+            id_proyeccion: number;
             id_semestre: number;
         })[];
     } & {
         codigo: string;
+        id_alumno: number;
         nombre: string;
         id_proyeccion: number;
-        id_alumno: number;
     }) | null>;
     eliminar(id: string): Promise<void>;
 }

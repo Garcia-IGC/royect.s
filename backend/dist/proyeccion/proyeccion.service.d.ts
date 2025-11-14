@@ -17,15 +17,15 @@ export declare class ProyeccionService {
                 id_ramo: number;
             }[];
         } & {
-            id_proyeccion: number;
             semestre: number;
+            id_proyeccion: number;
             id_semestre: number;
         })[];
     } & {
         codigo: string;
+        id_alumno: number;
         nombre: string;
         id_proyeccion: number;
-        id_alumno: number;
     }>;
     obtenerProyeccionesPorRut(rut: string): Promise<({
         semestres: ({
@@ -42,15 +42,15 @@ export declare class ProyeccionService {
                 id_ramo: number;
             }[];
         } & {
-            id_proyeccion: number;
             semestre: number;
+            id_proyeccion: number;
             id_semestre: number;
         })[];
     } & {
         codigo: string;
+        id_alumno: number;
         nombre: string;
         id_proyeccion: number;
-        id_alumno: number;
     })[]>;
     obtenerProyeccionPorId(id: number): Promise<({
         semestres: ({
@@ -67,15 +67,15 @@ export declare class ProyeccionService {
                 id_ramo: number;
             }[];
         } & {
-            id_proyeccion: number;
             semestre: number;
+            id_proyeccion: number;
             id_semestre: number;
         })[];
     } & {
         codigo: string;
+        id_alumno: number;
         nombre: string;
         id_proyeccion: number;
-        id_alumno: number;
     }) | null>;
     eliminarProyeccion(id: number): Promise<void>;
 }

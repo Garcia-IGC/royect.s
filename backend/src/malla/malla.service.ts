@@ -45,7 +45,7 @@ export class MallaService {
             //Transacción para la obtencion de los datos
             try {
                 const response = await firstValueFrom(
-                this.httpService.get(url, { headers: { 'X-HAWAII-AUTH': 'jf400fejof13f' }})
+                this.httpService.get(url, { headers: { 'X-HAWAII-AUTH': process.env.HAWAII_AUTH }})
                 );
                 
                 resultadoFinal.carreras.push({
@@ -94,7 +94,7 @@ export class MallaService {
             try {
                 const response = await firstValueFrom(
                     this.httpService.get(url, { 
-                        headers: { 'X-HAWAII-AUTH': 'jf400fejof13f' } 
+                        headers: { 'X-HAWAII-AUTH': process.env.HAWAII_AUTH} 
                     })
                 );
                 
@@ -144,6 +144,7 @@ export class MallaService {
         // Busca el avance correspondiente a esta carrera
         const avanceCarrera = avances.find(a => a.codigo === carrera.codigo);
 
+        
 
         if (!avanceCarrera || avanceCarrera.error) {
         // Si no hay datos de la carrera en el avance, marca todos los ramos como no cursados
@@ -194,6 +195,6 @@ export class MallaService {
     }
 
     return resultadoFinal;
-}
+    }
 
 }

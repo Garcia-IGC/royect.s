@@ -27,7 +27,7 @@ let MallaService = class MallaService {
         for (const carrera of datosAuth.carreras) {
             const url = `https://losvilos.ucn.cl/hawaii/api/mallas?${carrera.codigo}-${carrera.catalogo}`;
             try {
-                const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, { headers: { 'X-HAWAII-AUTH': 'jf400fejof13f' } }));
+                const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, { headers: { 'X-HAWAII-AUTH': process.env.HAWAII_AUTH } }));
                 resultadoFinal.carreras.push({
                     carrera: carrera.nombre,
                     codigo: carrera.codigo,
@@ -55,7 +55,7 @@ let MallaService = class MallaService {
             const url = `https://puclaro.ucn.cl/eross/avance/avance.php?rut=${resultadoFinal.rut}&codcarrera=${carrera.codigo}`;
             try {
                 const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, {
-                    headers: { 'X-HAWAII-AUTH': 'jf400fejof13f' }
+                    headers: { 'X-HAWAII-AUTH': process.env.HAWAII_AUTH }
                 }));
                 avances.push({
                     carrera: carrera.carrera,
