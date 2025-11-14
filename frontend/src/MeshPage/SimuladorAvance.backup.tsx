@@ -166,7 +166,7 @@ const SimuladorAvance: React.FC<Props> = ({ data, onSave }) => {
 
   /**
    * Agrega un semestre proyectado para la carrera.
-   * Recibe además `nivelesVisibles` (array de números con todos los niveles ya visibles)
+   * Recibe además nivelesVisibles (array de números con todos los niveles ya visibles)
    * para calcular correctamente el siguiente nivel (max + 1).
    */
   const agregarSemestre = (codCarrera: string, nivelesVisibles: number[]) => {
