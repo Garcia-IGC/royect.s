@@ -3,7 +3,7 @@ import './styles.css'
 import axios from 'axios';
 
 type LoginPageProps = {
-  onLogin: (username: string, password: string) => void;
+  onLogin: (data: any) => void;
 };
 
 /// Pagina de login que tambien revisa los parametros de autenticacion enviados por el back
@@ -25,11 +25,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
       if (response.data.error) {
         setError(response.data.error);
-
       } else {
         console.log('Login successful:', response.data);
-        onLogin(username, password);
-        
+        // Guardar en localStorage
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userData', JSON.stringify(response.data));
+        // Pasar datos completos al callback
+        onLogin(response.data);
       }
     } catch (err) {
       setError('Error al conectar con el servidor. Asegúrate de que el backend está corriendo.');
