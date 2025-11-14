@@ -21,19 +21,15 @@ let ProyeccionController = class ProyeccionController {
         this.proyeccionService = proyeccionService;
     }
     async guardar(data) {
-        console.log('📩 POST /proyeccion/guardar recibido');
         return this.proyeccionService.guardarProyeccion(data);
     }
     async obtenerPorRut(rut) {
-        console.log('📩 GET /proyeccion/obtener/' + rut);
         return this.proyeccionService.obtenerProyeccionesPorRut(rut);
     }
     async obtenerPorId(id) {
-        console.log('📩 GET /proyeccion/detalle/' + id);
         return this.proyeccionService.obtenerProyeccionPorId(parseInt(id));
     }
     async eliminar(id) {
-        console.log('📩 DELETE /proyeccion/eliminar/' + id);
         return this.proyeccionService.eliminarProyeccion(parseInt(id));
     }
 };
