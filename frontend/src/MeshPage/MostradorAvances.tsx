@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 
 interface Ramo {
@@ -95,6 +95,21 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut }) => {
 
     return { aprobados, reprobados, inscritos, noCursados, total, porcentaje };
   };
+
+  
+  type DemandaItem = { codigo: string; asignatura: string};
+
+  const cursosDemanda = useMemo<DemandaItem[]>(() => {
+    if (!proyeccionSeleccionada) return [];
+    const ramos = proyeccionSeleccionada.semestres.flatMap(s => s.ramos);
+    const map = new Map<string, DemandaItem>();
+    ramos.forEach(r => {
+      if (!map.has(r.codigo)) {
+        map.set(r.codigo, { codigo: r.codigo, asignatura: r.asignatura });
+      }
+    });
+    return Array.from(map.values());
+  }, [proyeccionSeleccionada]);
 
   if (loading) {
     return (
@@ -280,6 +295,35 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut }) => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+      
+      {/* Recuadro de demanda (mock) */}
+      {proyeccionSeleccionada && (
+        <div className="bg-white rounded-xl shadow-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold text-gray-800">Demanda (próximo semestre)</h3>
+            <span className="text-xs text-gray-500">(dato pendiente)</span>
+          </div>
+
+          {cursosDemanda.length === 0 ? (
+            <p className="text-sm text-gray-600">No hay ramos para estimar demanda.</p>
+          ) : (
+            <div className="divide-y">
+              {cursosDemanda.map((item) => (
+                <div key={item.codigo} className="flex items-center justify-between py-2">
+                  <div>
+                    <div className="text-sm font-medium text-gray-800">{item.asignatura}</div>
+                    <div className="text-xs text-gray-500">{item.codigo}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-indigo-700">--</span>
+                    <span className="text-xs text-gray-500">simulaciones</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
