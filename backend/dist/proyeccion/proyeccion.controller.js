@@ -32,6 +32,9 @@ let ProyeccionController = class ProyeccionController {
     async eliminar(id) {
         return this.proyeccionService.eliminarProyeccion(parseInt(id));
     }
+    async actualizar(id, data) {
+        return this.proyeccionService.actualizarProyeccion(parseInt(id), data);
+    }
 };
 exports.ProyeccionController = ProyeccionController;
 __decorate([
@@ -62,6 +65,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], ProyeccionController.prototype, "eliminar", null);
+__decorate([
+    (0, common_1.Put)('actualizar/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], ProyeccionController.prototype, "actualizar", null);
 exports.ProyeccionController = ProyeccionController = __decorate([
     (0, common_1.Controller)('proyeccion'),
     __metadata("design:paramtypes", [proyeccion_service_1.ProyeccionService])

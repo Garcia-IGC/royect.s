@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Put } from '@nestjs/common';
 import { ProyeccionService } from './proyeccion.service';
 
 @Controller('proyeccion')
@@ -23,5 +23,10 @@ export class ProyeccionController {
   @Delete('eliminar/:id')
   async eliminar(@Param('id') id: string) {
     return this.proyeccionService.eliminarProyeccion(parseInt(id));
+  }
+
+  @Put('actualizar/:id')
+  async actualizar(@Param('id') id: string, @Body() data: any) {
+    return this.proyeccionService.actualizarProyeccion(parseInt(id), data);
   }
 }

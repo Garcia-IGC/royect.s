@@ -109,6 +109,45 @@ let ProyeccionService = class ProyeccionService {
             await tx.proyeccion.delete({ where: { id_proyeccion: id } });
         });
     }
+    async actualizarProyeccion(id, data) {
+        const { rut, carrera, codigo, plan } = data;
+        await this.prisma.$transaction(async (tx) => {
+            const semestres = await tx.semestre.findMany({
+                where: { id_proyeccion: id },
+                select: { id_semestre: true },
+            });
+            for (const s of semestres) {
+                await tx.ramo.deleteMany({ where: { id_semestre: s.id_semestre } });
+            }
+            await tx.semestre.deleteMany({ where: { id_proyeccion: id } });
+        });
+        const proyeccionActualizada = await this.prisma.proyeccion.update({
+            where: { id_proyeccion: id },
+            data: {
+                codigo,
+                nombre: carrera,
+                semestres: {
+                    create: Object.entries(plan).map(([num, ramos]) => ({
+                        semestre: parseInt(num),
+                        ramos: {
+                            create: ramos.map((r) => ({
+                                codigo: r.codigo,
+                                asignatura: r.asignatura,
+                                creditos: r.creditos ?? 0,
+                                nivel: r.nivel ?? 0,
+                                prereq: r.prereq ?? '',
+                                intento: r.intento ?? 1,
+                                status: r.status ?? 'NO CURSADO',
+                                cursada: r.cursada ?? false,
+                            })),
+                        },
+                    })),
+                },
+            },
+            include: { semestres: { include: { ramos: true } } },
+        });
+        return proyeccionActualizada;
+    }
 };
 exports.ProyeccionService = ProyeccionService;
 exports.ProyeccionService = ProyeccionService = __decorate([

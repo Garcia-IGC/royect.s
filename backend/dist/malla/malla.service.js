@@ -27,7 +27,12 @@ let MallaService = class MallaService {
         for (const carrera of datosAuth.carreras) {
             const url = `https://losvilos.ucn.cl/hawaii/api/mallas?${carrera.codigo}-${carrera.catalogo}`;
             try {
-                const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, { headers: { 'X-HAWAII-AUTH': process.env.HAWAII_AUTH } }));
+                const hawaiiAuth = process.env.HAWAII_AUTH;
+                if (!hawaiiAuth || hawaiiAuth === 'TU_TOKEN_DE_AUTENTICACION_AQUI') {
+                    console.error('❌ HAWAII_AUTH no configurado en .env');
+                    throw new Error('Token de autenticación no configurado');
+                }
+                const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, { headers: { 'X-HAWAII-AUTH': hawaiiAuth } }));
                 resultadoFinal.carreras.push({
                     carrera: carrera.nombre,
                     codigo: carrera.codigo,
@@ -36,7 +41,14 @@ let MallaService = class MallaService {
                 });
             }
             catch (error) {
-                console.error(`Error al obtener malla de ${carrera.codigo}-${carrera.catalogo}`, error.message);
+                let errorMessage = error.message;
+                if (error.response?.status === 401) {
+                    errorMessage = 'Token de autenticación inválido o expirado (401)';
+                    console.error(`❌ ${errorMessage} - Verifica HAWAII_AUTH en .env`);
+                }
+                else {
+                    console.error(`❌ Error al obtener malla de ${carrera.codigo}-${carrera.catalogo}:`, errorMessage);
+                }
                 resultadoFinal.carreras.push({
                     carrera: carrera.nombre,
                     codigo: carrera.codigo,

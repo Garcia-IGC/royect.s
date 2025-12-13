@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 type Asignatura = {
@@ -23,11 +23,27 @@ export type AuthDataDto = {
   carreras: CarreraDto[];
 };
 
-type Props = {
-  data: AuthDataDto;
+type ProyeccionEditar = {
+  id_proyeccion: number;
+  codigo: string;
+  nombre: string;
+  semestres: Array<{
+    semestre: number;
+    ramos: Array<{
+      codigo: string;
+      nivel: number;
+      status: string;
+    }>;
+  }>;
 };
 
-const SimuladorAvance: React.FC<Props> = ({ data }) => {
+type Props = {
+  data: AuthDataDto;
+  proyeccionEditar?: ProyeccionEditar;
+  onCancelarEdicion?: () => void;
+};
+
+const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEdicion }) => {
   type Plan = Record<number, string[]>;
   const [planPorCarrera, setPlanPorCarrera] = useState<Record<string, Plan>>({});
   const [editandoCarrera, setEditandoCarrera] = useState<string | null>(null);
@@ -35,6 +51,46 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
   const [hoveredAsignatura, setHoveredAsignatura] = useState<string | null>(null);
   // Ramos marcados como "inscritos en simulación" para permitir mover sus dependientes
   const [ramosInscritosSimulacion, setRamosInscritosSimulacion] = useState<Record<string, Set<string>>>({});
+  const [proyeccionId, setProyeccionId] = useState<number | null>(null);
+
+  // Cargar proyección al montar el componente si se está editando
+  useEffect(() => {
+    if (proyeccionEditar) {
+      cargarProyeccionParaEditar(proyeccionEditar);
+    }
+  }, [proyeccionEditar]);
+
+  const cargarProyeccionParaEditar = (proyeccion: ProyeccionEditar) => {
+    const carrera = data.carreras.find(c => c.codigo === proyeccion.codigo);
+    if (!carrera) return;
+
+    setProyeccionId(proyeccion.id_proyeccion);
+    setEditandoCarrera(proyeccion.codigo);
+
+    // Construir el plan a partir de la proyección
+    const planCargado: Record<number, string[]> = {};
+    const inscritosSimulados = new Set<string>();
+
+    proyeccion.semestres.forEach(semestre => {
+      semestre.ramos.forEach(ramo => {
+        // Si el ramo está en un semestre diferente a su nivel original, está movido
+        if (ramo.nivel !== semestre.semestre) {
+          if (!planCargado[semestre.semestre]) {
+            planCargado[semestre.semestre] = [];
+          }
+          planCargado[semestre.semestre].push(ramo.codigo);
+        }
+
+        // Si el ramo está marcado como PROYECTADO, agregarlo a inscritosSimulados
+        if (ramo.status === 'PROYECTADO') {
+          inscritosSimulados.add(ramo.codigo);
+        }
+      });
+    });
+
+    setPlanPorCarrera(prev => ({ ...prev, [proyeccion.codigo]: planCargado }));
+    setRamosInscritosSimulacion(prev => ({ ...prev, [proyeccion.codigo]: inscritosSimulados }));
+  };
 
   const noCursada = (a: Asignatura) => a.status !== 'APROBADO' && a.status !== 'INSCRITO';
 
@@ -104,6 +160,34 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
     return nivelOriginal;
   };
 
+  // Nueva función: Calcular créditos totales de un semestre (solo ramos inscritos o en simulación)
+  const calcularCreditosSemestre = (
+    nivel: number, 
+    plan: Plan, 
+    malla: Asignatura[], 
+    codCarrera: string
+  ): number => {
+    const inscritosSimulados = ramosInscritosSimulacion[codCarrera] ?? new Set();
+    
+    // Obtener todos los ramos del semestre
+    const ramosEnSemestre = malla.filter((a) => {
+      const nivelActual = obtenerNivelActualRamo(a.codigo, a.nivel, plan);
+      return nivelActual === nivel;
+    });
+    
+    // Sumar solo los créditos de ramos inscritos o marcados como inscritos en simulación
+    return ramosEnSemestre.reduce((total, asig) => {
+      const estaInscrito = asig.status === 'INSCRITO';
+      const estaInscritoSimulado = inscritosSimulados.has(asig.codigo);
+      
+      // Solo contar si está inscrito o marcado como inscrito en simulación
+      if (estaInscrito || estaInscritoSimulado) {
+        return total + asig.creditos;
+      }
+      return total;
+    }, 0);
+  };
+
   const moverRamo = (
     codCarrera: string,
     codigo: string,
@@ -120,7 +204,7 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
     // Si es el mismo nivel, no hacer nada
     if (nivelActual === nivelDestino) return;
 
-    // Crear un plan temporal para validar prerequisitos
+    // Crear un plan temporal para validar prerequisitos y créditos
     const planTemp = { ...planActual };
     
     // Remover el ramo de su posición actual en el plan temporal
@@ -131,6 +215,24 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
         delete planTemp[niv];
       }
     });
+
+    // Calcular créditos actuales del semestre destino (sin incluir el ramo que vamos a mover)
+    const creditosActualesSemestre = calcularCreditosSemestre(nivelDestino, planTemp, malla, codCarrera);
+    
+    // Validar que no se excedan los 30 créditos (solo si el ramo se va a marcar como inscrito)
+    const inscritosSimulados = ramosInscritosSimulacion[codCarrera] ?? new Set();
+    const seraInscrito = inscritosSimulados.has(codigo);
+    
+    if (seraInscrito && creditosActualesSemestre + asig.creditos > 30) {
+      alert(
+        `❌ No se puede mover "${asig.asignatura}" al semestre ${nivelDestino}.\n\n` +
+        `Créditos inscritos en semestre ${nivelDestino}: ${creditosActualesSemestre} SCT\n` +
+        `Créditos del ramo: ${asig.creditos} SCT\n` +
+        `Total resultante: ${creditosActualesSemestre + asig.creditos} SCT\n\n` +
+        `⚠️ Máximo permitido: 30 SCT por semestre`
+      );
+      return;
+    }
 
     // Agregar el ramo al nivel destino en el plan temporal
     planTemp[nivelDestino] = [...(planTemp[nivelDestino] ?? []), codigo];
@@ -151,19 +253,48 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
     setPlanPorCarrera((prev) => ({ ...prev, [codCarrera]: {} }));
     setRamosInscritosSimulacion((prev) => ({ ...prev, [codCarrera]: new Set() }));
     setEditandoCarrera(null);
+    setProyeccionId(null);
+    if (onCancelarEdicion) {
+      onCancelarEdicion();
+    }
   };
 
-  const toggleInscripcionSimulada = (codCarrera: string, codigo: string) => {
-    setRamosInscritosSimulacion((prev) => {
-      const inscritosActuales = prev[codCarrera] ?? new Set();
-      const nuevosInscritos = new Set(inscritosActuales);
-      
-      if (nuevosInscritos.has(codigo)) {
+  const toggleInscripcionSimulada = (codCarrera: string, codigo: string, malla: Asignatura[]) => {
+    const asig = malla.find((a) => a.codigo === codigo);
+    if (!asig) return;
+    
+    const inscritosActuales = ramosInscritosSimulacion[codCarrera] ?? new Set();
+    const planActual = planPorCarrera[codCarrera] ?? {};
+    const nivelActual = obtenerNivelActualRamo(codigo, asig.nivel, planActual);
+    
+    // Si ya está marcado, simplemente desmarcarlo
+    if (inscritosActuales.has(codigo)) {
+      setRamosInscritosSimulacion((prev) => {
+        const nuevosInscritos = new Set(prev[codCarrera] ?? new Set());
         nuevosInscritos.delete(codigo);
-      } else {
-        nuevosInscritos.add(codigo);
-      }
-      
+        return { ...prev, [codCarrera]: nuevosInscritos };
+      });
+      return;
+    }
+    
+    // Si se va a marcar como inscrito, validar límite de créditos
+    const creditosActualesSemestre = calcularCreditosSemestre(nivelActual, planActual, malla, codCarrera);
+    
+    if (creditosActualesSemestre + asig.creditos > 30) {
+      alert(
+        `❌ No se puede inscribir "${asig.asignatura}" en semestre ${nivelActual}.\n\n` +
+        `Créditos inscritos actuales: ${creditosActualesSemestre} SCT\n` +
+        `Créditos del ramo: ${asig.creditos} SCT\n` +
+        `Total resultante: ${creditosActualesSemestre + asig.creditos} SCT\n\n` +
+        `⚠️ Máximo permitido: 30 SCT por semestre`
+      );
+      return;
+    }
+    
+    // Marcar como inscrito
+    setRamosInscritosSimulacion((prev) => {
+      const nuevosInscritos = new Set(prev[codCarrera] ?? new Set());
+      nuevosInscritos.add(codigo);
       return { ...prev, [codCarrera]: nuevosInscritos };
     });
   };
@@ -252,6 +383,9 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
     const carrera = data.carreras.find((c) => c.codigo === codCarrera);
     if (!carrera) return;
 
+    // Obtener los ramos marcados como proyectados en la simulación
+    const inscritosSimulados = ramosInscritosSimulacion[codCarrera] ?? new Set();
+
     // Construir el plan completo incluyendo los ramos en su posición original
     const planCompleto: Record<number, Asignatura[]> = {};
 
@@ -275,11 +409,12 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
               (a) => a.codigo !== codigo
             );
           });
-          // Agregar en la nueva posición
+          // Agregar en la nueva posición (mantener nivel original de asig.nivel)
           if (!planCompleto[nivel]) {
             planCompleto[nivel] = [];
           }
-          planCompleto[nivel].push({ ...asig, nivel });
+          // NO sobrescribir el nivel original - mantener asig.nivel
+          planCompleto[nivel].push({ ...asig });
         }
       });
     });
@@ -294,29 +429,63 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
             .filter(([_, asigs]) => asigs.length > 0)
             .map(([nivel, asigs]) => [
               nivel,
-              asigs.map((asig) => ({
-                codigo: asig.codigo,
-                asignatura: asig.asignatura,
-                creditos: asig.creditos,
-                nivel: Number(nivel),
-                prereq: asig.prereq,
-                intento: asig.intento ?? 0,
-                status: asig.status ?? 'NO CURSADO',
-                cursada: asig.status === 'INSCRITO' || asig.status === 'APROBADO',
-              })),
+              asigs.map((asig) => {
+                // Determinar el status: si está en inscritosSimulados y no tiene status previo, marcarlo como PROYECTADO
+                let status = asig.status ?? 'NO CURSADO';
+                if (inscritosSimulados.has(asig.codigo) && status === 'NO CURSADO') {
+                  status = 'PROYECTADO';
+                }
+                
+                return {
+                  codigo: asig.codigo,
+                  asignatura: asig.asignatura,
+                  creditos: asig.creditos,
+                  nivel: asig.nivel, // Mantener el nivel original del ramo
+                  prereq: asig.prereq,
+                  intento: asig.intento ?? 0,
+                  status: status,
+                  cursada: status === 'INSCRITO' || status === 'APROBADO',
+                };
+              }),
             ])
         ),
       };
 
-      const response = await axios.post('http://localhost:3000/proyeccion/guardar', payload);
+      console.log('📤 Payload a enviar:', JSON.stringify(payload, null, 2));
+      console.log('🔑 Proyección ID:', proyeccionId);
+
+      // Si estamos editando, actualizar; si no, crear nueva
+      const url = proyeccionId 
+        ? `http://localhost:3000/proyeccion/actualizar/${proyeccionId}`
+        : 'http://localhost:3000/proyeccion/guardar';
+      
+      console.log('🌐 URL:', url);
+      console.log('📋 Método:', proyeccionId ? 'PUT' : 'POST');
+      
+      const response = proyeccionId
+        ? await axios.put(url, payload)
+        : await axios.post(url, payload);
+      
       console.log('✅ Proyección guardada correctamente:', response.data);
-      alert('✅ Proyección guardada exitosamente');
+      alert(proyeccionId ? '✅ Proyección actualizada exitosamente' : '✅ Proyección guardada exitosamente');
 
       setEditandoCarrera(null);
       setPlanPorCarrera((prev) => ({ ...prev, [codCarrera]: {} }));
-    } catch (err) {
+      setRamosInscritosSimulacion((prev) => ({ ...prev, [codCarrera]: new Set() }));
+      setProyeccionId(null);
+      
+      if (onCancelarEdicion) {
+        onCancelarEdicion();
+      }
+    } catch (err: any) {
       console.error('❌ Error al guardar la proyección:', err);
-      alert('❌ Error al guardar la proyección. Revisa la consola para más detalles.');
+      console.error('❌ Detalles del error:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText
+      });
+      alert(`❌ Error al guardar la proyección.\n\nDetalles: ${err.response?.data?.message || err.message}\n\nRevisa la consola para más información.`);
     }
   };
 
@@ -344,7 +513,7 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
       {/* Encabezado */}
       <div className="mb-4">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
-          🎯 Simulador de Proyección Curricular
+          {proyeccionId ? '✏️ Editar Proyección Curricular' : '🎯 Simulador de Proyección Curricular'}
         </h1>
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg">
           <p className="text-sm text-gray-700 mb-1">
@@ -422,7 +591,7 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
                       onClick={() => guardar(carrera.codigo)}
                       className="text-sm px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 shadow-md transition"
                     >
-                      💾 Guardar Proyección
+                      {proyeccionId ? '💾 Actualizar Proyección' : '💾 Guardar Proyección'}
                     </button>
                   </>
                 )}
@@ -452,6 +621,17 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
                     // Todos los ramos a mostrar (originales + movidos aquí)
                     const todosRamos = [...ramosOriginales, ...ramosMovidosAqui];
 
+                    // Calcular créditos inscritos del semestre (solo inscritos o marcados como inscritos)
+                    const inscritosSimuladosLocal = ramosInscritosSimulacion[carrera.codigo] ?? new Set();
+                    const creditosSemestre = todosRamos.reduce((sum, r) => {
+                      if (r.status === 'INSCRITO' || inscritosSimuladosLocal.has(r.codigo)) {
+                        return sum + r.creditos;
+                      }
+                      return sum;
+                    }, 0);
+                    const creditosExcedidos = creditosSemestre > 30;
+                    const creditosCasi = creditosSemestre >= 25 && creditosSemestre <= 30;
+
                     return (
                       <div
                         key={nivel}
@@ -464,13 +644,29 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
                           }
                         }}
                       >
-                        <div className="bg-gradient-to-r from-cyan-500 to-teal-400 rounded-lg p-3 mb-3 shadow-md">
+                        <div className={`rounded-lg p-3 mb-3 shadow-md ${
+                          creditosExcedidos 
+                            ? 'bg-gradient-to-r from-red-500 to-red-600' 
+                            : creditosCasi 
+                            ? 'bg-gradient-to-r from-orange-500 to-amber-500'
+                            : 'bg-gradient-to-r from-cyan-500 to-teal-400'
+                        }`}>
                           <h3 className="text-sm font-bold text-white text-center">
                             📅 Semestre {nivel}
                           </h3>
                           <p className="text-xs text-center text-white/80 mt-0.5">
                             {todosRamos.length} asignaturas
                           </p>
+                          <div className={`text-xs font-bold text-center mt-1 px-2 py-1 rounded ${
+                            creditosExcedidos 
+                              ? 'bg-red-900/30 text-white' 
+                              : creditosCasi
+                              ? 'bg-orange-900/30 text-white'
+                              : 'bg-white/20 text-white'
+                          }`}>
+                            {creditosSemestre} / 30 SCT
+                            {creditosExcedidos && ' ⚠️'}
+                          </div>
                         </div>
 
                         {/* Zona de drop */}
@@ -569,7 +765,7 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      toggleInscripcionSimulada(carrera.codigo, asig.codigo);
+                                      toggleInscripcionSimulada(carrera.codigo, asig.codigo, carrera.malla);
                                     }}
                                     className={`w-full text-[10px] font-bold px-2 py-1 rounded mt-2 transition ${
                                       estaInscritoSimulado
@@ -690,6 +886,30 @@ const SimuladorAvance: React.FC<Props> = ({ data }) => {
                     <span className="text-indigo-600">💡</span>
                     <span>
                       Puedes mover ramos <strong>hacia adelante o atrás</strong> en los semestres
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-red-600">⚠️</span>
+                    <span>
+                      <strong className="text-red-600">Máximo 30 SCT</strong> por semestre (límite reglamentario)
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-cyan-600">📊</span>
+                    <span>
+                      El contador muestra solo créditos <strong>inscritos</strong> o <strong>marcados para inscripción</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-orange-600">🔶</span>
+                    <span>
+                      Encabezado <strong className="text-orange-600">naranja</strong>: 25-30 SCT inscritos (casi en el límite)
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-red-600">🔴</span>
+                    <span>
+                      Encabezado <strong className="text-red-600">rojo</strong>: &gt;30 SCT inscritos (excede el límite)
                     </span>
                   </div>
                   <div className="flex items-start gap-2">

@@ -28,9 +28,10 @@ interface Proyeccion {
 
 interface MostradorAvancesProps {
   rut: string;
+  onEditarProyeccion?: (proyeccion: Proyeccion) => void;
 }
 
-const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut }) => {
+const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut, onEditarProyeccion }) => {
   const [proyecciones, setProyecciones] = useState<Proyeccion[]>([]);
   const [proyeccionSeleccionada, setProyeccionSeleccionada] = useState<Proyeccion | null>(null);
   const [loading, setLoading] = useState(true);
@@ -170,16 +171,28 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut }) => {
                     </h4>
                     <p className="text-xs text-gray-600">Código: {proyeccion.codigo}</p>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      eliminarProyeccion(proyeccion.id_proyeccion);
-                    }}
-                    className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50"
-                    title="Eliminar proyección"
-                  >
-                    🗑️
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditarProyeccion && onEditarProyeccion(proyeccion);
+                      }}
+                      className="text-blue-500 hover:text-blue-700 text-xs px-2 py-1 rounded hover:bg-blue-50"
+                      title="Editar proyección"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        eliminarProyeccion(proyeccion.id_proyeccion);
+                      }}
+                      className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50"
+                      title="Eliminar proyección"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-1">
@@ -237,16 +250,42 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut }) => {
                         {semestre.ramos.map((ramo, idx) => {
                           const ramoId = `${semestre.id_semestre}-${idx}`;
                           const nombresPrereq = obtenerNombresPrereq(ramo.prereq, todosLosRamos);
+                          
+                          // Determinar si el ramo fue movido de su semestre original o está proyectado
+                          const fueMovido = ramo.nivel !== semestre.semestre;
+                          const esProyectado = ramo.status === 'PROYECTADO';
+                          
+                          // Determinar colores según estado y si fue movido
+                          let bgColor, borderColor, codigoBadge;
+                          
+                          if (ramo.status === 'APROBADO') {
+                            bgColor = 'bg-gradient-to-br from-green-50 to-emerald-50';
+                            borderColor = 'border-emerald-500';
+                            codigoBadge = 'bg-emerald-100 text-emerald-700';
+                          } else if (ramo.status === 'INSCRITO') {
+                            bgColor = 'bg-gradient-to-br from-blue-50 to-sky-50';
+                            borderColor = 'border-sky-500';
+                            codigoBadge = 'bg-sky-100 text-sky-700';
+                          } else if (fueMovido || esProyectado) {
+                            // Ramo proyectado/movido - color morado
+                            bgColor = 'bg-gradient-to-br from-purple-50 to-violet-50';
+                            borderColor = 'border-purple-500';
+                            codigoBadge = 'bg-purple-100 text-purple-700';
+                          } else {
+                            bgColor = 'bg-gradient-to-br from-teal-50 to-cyan-50';
+                            borderColor = 'border-teal-400';
+                            codigoBadge = 'bg-teal-100 text-teal-700';
+                          }
 
                           return (
                             <div
                               key={ramo.id_ramo}
-                              className="relative z-10 bg-gradient-to-br from-teal-50 to-cyan-50 border-l-4 border-teal-400 rounded-lg p-3 shadow-md hover:shadow-lg hover:z-20 transition-all duration-200 hover:scale-105 cursor-pointer"
+                              className={`relative z-10 ${bgColor} border-l-4 ${borderColor} rounded-lg p-3 shadow-md hover:shadow-lg hover:z-20 transition-all duration-200 hover:scale-105 cursor-pointer`}
                               onMouseEnter={() => setHoveredAsignatura(ramoId)}
                               onMouseLeave={() => setHoveredAsignatura(null)}
                             >
                               <div className="flex items-start justify-between mb-2 gap-1 flex-wrap">
-                                <span className="text-[10px] font-bold text-teal-700 bg-teal-100 px-1.5 py-0.5 rounded">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${codigoBadge}`}>
                                   {ramo.codigo}
                                 </span>
                                 <span className="text-[10px] font-semibold text-gray-600 bg-white px-1.5 py-0.5 rounded shadow-sm">
@@ -274,6 +313,17 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut }) => {
                                 {ramo.asignatura}
                               </h5>
 
+                              {/* Badge de ramo proyectado */}
+                              {(fueMovido || esProyectado) && (
+                                <div className="mt-2">
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500 text-white">
+                                    {fueMovido 
+                                      ? `📍 Proyectado (S${ramo.nivel}→S${semestre.semestre})` 
+                                      : '📍 Proyectado'}
+                                  </span>
+                                </div>
+                              )}
+
                               {/* Tooltip de prerequisitos */}
                               {ramo.prereq && hoveredAsignatura === ramoId && (
                                 <div className="absolute left-full ml-2 top-0 z-[999] w-64 bg-white border-2 border-teal-400 rounded-lg shadow-2xl p-3">
@@ -292,6 +342,37 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut }) => {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Leyenda de colores */}
+            <div className="mt-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 rounded-r-lg p-4">
+              <p className="text-sm font-bold text-indigo-800 mb-3">💡 Leyenda de colores:</p>
+              <div className="grid md:grid-cols-2 gap-2 text-xs text-gray-700">
+                <div className="flex items-start gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>
+                    Borde <strong className="text-green-600">verde</strong>: Ramo aprobado
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sky-600">✓</span>
+                  <span>
+                    Borde <strong className="text-sky-600">azul</strong>: Ramo inscrito
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-purple-600">📍</span>
+                  <span>
+                    Borde <strong className="text-purple-600">morado</strong>: Ramo proyectado/movido de su semestre original
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-teal-600">✓</span>
+                  <span>
+                    Borde <strong className="text-teal-600">teal</strong>: Ramo en su semestre original
+                  </span>
+                </div>
               </div>
             </div>
           </div>

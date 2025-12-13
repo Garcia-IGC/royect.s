@@ -18,6 +18,7 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
   const [hoveredAsignatura, setHoveredAsignatura] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [view, setView] = useState<'avance' | 'cursados' | 'proyeccion'| 'simulador' | 'guardadas'>('avance');
+  const [proyeccionEditando, setProyeccionEditando] = useState<any>(null);
   
 
   useEffect(() => {
@@ -205,12 +206,25 @@ const Malla: React.FC<MallaProps> = ({ userData }) => {
 
         {/* --- Vista: Simulador --- */}
         {view === 'simulador' && (
-          <SimuladorAvance data={data} />   // <-- NUEVO
+          <SimuladorAvance 
+            data={data} 
+            proyeccionEditar={proyeccionEditando}
+            onCancelarEdicion={() => {
+              setProyeccionEditando(null);
+              setView('guardadas');
+            }}
+          />
         )}
 
         {/* --- Vista: Proyecciones Guardadas --- */}
         {view === 'guardadas' && data && (
-          <MostradorAvances rut={data.rut} />
+          <MostradorAvances 
+            rut={data.rut} 
+            onEditarProyeccion={(proyeccion) => {
+              setProyeccionEditando(proyeccion);
+              setView('simulador');
+            }}
+          />
         )}
 
       </div>
