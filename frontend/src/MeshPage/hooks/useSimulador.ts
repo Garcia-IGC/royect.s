@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { proyeccionService } from '../services/proyeccionService';
 
 type Asignatura = {
   codigo: string;
@@ -235,6 +236,49 @@ export const useSimulador = (data: any) => {
     onCancelarEdicion?.();
   }, []);
 
+  const guardarProyeccion = useCallback(async (
+    codCarrera: string,
+    planCompleto: Record<number, any[]>,
+    inscritosSimulados: Set<string>
+  ) => {
+    const carrera = data.carreras.find((c: any) => c.codigo === codCarrera);
+    if (!carrera) throw new Error('Carrera no encontrada');
+
+    const payload = {
+      rut: data.rut,
+      codigo: carrera.codigo,
+      carrera: carrera.carrera,
+      plan: Object.fromEntries(
+        Object.entries(planCompleto)
+          .filter(([_, asigs]: [string, any]) => asigs.length > 0)
+          .map(([nivel, asigs]: [string, any]) => [
+            nivel,
+            asigs.map((asig: any) => {
+              let status = asig.status ?? 'NO CURSADO';
+              if (inscritosSimulados.has(asig.codigo) && status === 'NO CURSADO') {
+                status = 'PROYECTADO';
+              }
+              
+              return {
+                codigo: asig.codigo,
+                asignatura: asig.asignatura,
+                creditos: asig.creditos,
+                nivel: asig.nivel,
+                prereq: asig.prereq,
+                intento: asig.intento ?? 0,
+                status: status,
+                cursada: status === 'INSCRITO' || status === 'APROBADO',
+              };
+            }),
+          ])
+      ),
+    };
+
+    return proyeccionId
+      ? await proyeccionService.actualizar(proyeccionId, payload)
+      : await proyeccionService.guardar(payload);
+  }, [data.carreras, data.rut, proyeccionId]);
+
   return {
     planPorCarrera,
     editandoCarrera,
@@ -259,5 +303,6 @@ export const useSimulador = (data: any) => {
     toggleInscripcionSimulada,
     cargarProyeccionParaEditar,
     cancelar,
+    guardarProyeccion,
   };
 };

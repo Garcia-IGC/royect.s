@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import axios from 'axios';
 import { AuthDataDto } from './types';
 import { useSimulador } from './hooks/useSimulador';
+import { proyeccionService } from './services/proyeccionService';
 import CarrerHeader from './components/CarrerHeader';
 import SemesterCard from './components/SemesterCard';
 import AsignatureCard from './components/AsignatureCard';
@@ -115,7 +115,7 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
     if (!carrera) return;
 
     const inscritosSimulados = simulador.ramosInscritosSimulacion[codCarrera] ?? new Set();
-    const planCompleto: Record<number, Asignatura[]> = {};
+    const planCompleto: Record<number, any[]> = {};
 
     carrera.malla.forEach((asig) => {
       if (!planCompleto[asig.nivel]) planCompleto[asig.nivel] = [];
@@ -137,42 +137,7 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
     });
 
     try {
-      const payload = {
-        rut: data.rut,
-        codigo: carrera.codigo,
-        carrera: carrera.carrera,
-        plan: Object.fromEntries(
-          Object.entries(planCompleto)
-            .filter(([_, asigs]) => asigs.length > 0)
-            .map(([nivel, asigs]) => [
-              nivel,
-              asigs.map((asig) => {
-                let status = asig.status ?? 'NO CURSADO';
-                if (inscritosSimulados.has(asig.codigo) && status === 'NO CURSADO') {
-                  status = 'PROYECTADO';
-                }
-                return {
-                  codigo: asig.codigo,
-                  asignatura: asig.asignatura,
-                  creditos: asig.creditos,
-                  nivel: asig.nivel,
-                  prereq: asig.prereq,
-                  intento: asig.intento ?? 0,
-                  status: status,
-                  cursada: status === 'INSCRITO' || status === 'APROBADO',
-                };
-              }),
-            ])
-        ),
-      };
-
-      const url = simulador.proyeccionId 
-        ? `http://localhost:3000/proyeccion/actualizar/${simulador.proyeccionId}`
-        : 'http://localhost:3000/proyeccion/guardar';
-      
-      const response = simulador.proyeccionId
-        ? await axios.put(url, payload)
-        : await axios.post(url, payload);
+      await simulador.guardarProyeccion(codCarrera, planCompleto, inscritosSimulados);
       
       alert(simulador.proyeccionId ? '✅ Proyección actualizada exitosamente' : '✅ Proyección guardada exitosamente');
       simulador.setEditandoCarrera(null);
@@ -181,6 +146,7 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
       simulador.setProyeccionId(null);
       onCancelarEdicion?.();
     } catch (err: any) {
+      console.error('❌ Error al guardar:', err);
       alert(`❌ Error al guardar la proyección.\n\nDetalles: ${err.response?.data?.message || err.message}`);
     }
   };

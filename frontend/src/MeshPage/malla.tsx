@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { AuthDataDto } from './types';
-import { ViewType } from './constants/navigation';
+import React from 'react';
+import { useMalla } from './hooks/useMalla';
+import { useNavigation } from './hooks/useNavigation';
 import Sidebar from './components/Sidebar';
 import SidebarOverlay from './components/SidebarOverlay';
 import Header from './components/Header';
@@ -13,73 +12,20 @@ interface MallaProps {
 }
 
 const Malla: React.FC<MallaProps> = ({ userData }) => {
-  const [data, setData] = useState<AuthDataDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [view, setView] = useState<ViewType>('avance');
-  const [proyeccionEditando, setProyeccionEditando] = useState<any>(null);
-
-  useEffect(() => {
-    if (!userData) {
-      setLoading(false);
-      return;
-    }
-
-    if (!userData.carreras || !Array.isArray(userData.carreras)) {
-      setLoading(false);
-      setError('No se encontraron carreras para este usuario');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    const payload = {
-      rut: userData.rut,
-      carreras: userData.carreras.map((c) => ({
-        codigo: c.codigo,
-        nombre: c.nombre,
-        catalogo: c.catalogo,
-      })),
-    };
-
-    const fetchMallas = async () => {
-      try {
-        const response = await axios.post<AuthDataDto>(
-          'http://localhost:3000/malla/malla-avance',
-          payload
-        );
-        setData(response.data);
-      } catch (err) {
-        setError('Error al obtener las mallas');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMallas();
-  }, [userData]);
+  const { data, loading, error } = useMalla({ userData });
+  const {
+    view,
+    sidebarOpen,
+    proyeccionEditando,
+    setSidebarOpen,
+    handleNavigate,
+    handleEditarProyeccion,
+    handleCancelarEdicion,
+  } = useNavigation();
 
   if (loading) return <LoadingScreen />;
   if (error) return <p>{error}</p>;
   if (!data) return <p>No hay datos</p>;
-
-  const handleNavigate = (newView: ViewType) => {
-    setView(newView);
-    setSidebarOpen(false);
-  };
-
-  const handleEditarProyeccion = (proyeccion: any) => {
-    setProyeccionEditando(proyeccion);
-    setView('simulador');
-  };
-
-  const handleCancelarEdicion = () => {
-    setProyeccionEditando(null);
-    setView('guardadas');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
