@@ -247,7 +247,9 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut, onEditarProyec
                       </div>
 
                       <div className="space-y-2">
-                        {semestre.ramos.map((ramo, idx) => {
+                        {semestre.ramos
+                          .filter((ramo) => ramo.status === 'PROYECTADO')
+                          .map((ramo, idx) => {
                           const ramoId = `${semestre.id_semestre}-${idx}`;
                           const nombresPrereq = obtenerNombresPrereq(ramo.prereq, todosLosRamos);
                           

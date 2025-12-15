@@ -197,8 +197,8 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
                       .filter(Boolean) as Asignatura[];
 
                     const todosRamosEnPlan = new Set(Object.values(planActual).flatMap((codigos) => codigos));
-                    const ramosOriginales = asignaturas.filter((r) => !todosRamosEnPlan.has(r.codigo));
-                    const todosRamos = [...ramosOriginales, ...ramosMovidosAqui];
+                    const ramosOriginales = asignaturas.filter((r) => !todosRamosEnPlan.has(r.codigo) && simulador.noCursada(r));
+                    const todosRamos = [...ramosOriginales, ...ramosMovidosAqui].filter((r) => simulador.noCursada(r));
 
                     const creditosSemestre = todosRamos.reduce((sum, r) => {
                       if (r.status === 'INSCRITO' || inscritosSimulados.has(r.codigo)) {
