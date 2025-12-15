@@ -6,6 +6,7 @@ import MostradorAvances from '../MostradorAvances';
 import Cursados from '../Cursados';
 import Proyeccion from '../Proyeccion';
 import AvanceView from '../Avance';
+import OptimizedProjection from '../optimizacionMalla'; 
 
 interface ViewRendererProps {
   currentView: ViewType;
@@ -42,6 +43,13 @@ const ViewRenderer: React.FC<ViewRendererProps> = ({
         <MostradorAvances
           rut={data.rut}
           onEditarProyeccion={onEditarProyeccion}
+        />
+      )}
+
+      {currentView === 'optimizada' && (
+        <OptimizedProjection 
+            rut={data.rut} 
+            onGuardar={(p) => console.log("Guardar proyección", p)} 
         />
       )}
     </>
