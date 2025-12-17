@@ -167,6 +167,16 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
         </div>
       </div>
 
+      <button
+        onClick={() => {
+          const carrera = data.carreras[0];
+          if (carrera) simulador.simularOptimista(carrera.codigo, carrera.malla);
+        }}
+        className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-lg shadow-md transition-all hover:shadow-lg"
+      >
+        🚀 Simulación Optimista
+      </button>
+
       {data.carreras.map((carrera, idx) => {
         const enEdicion = simulador.editandoCarrera === carrera.codigo;
         const planActual = simulador.planPorCarrera[carrera.codigo] ?? {};
