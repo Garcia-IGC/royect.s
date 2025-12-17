@@ -393,35 +393,40 @@ export const useSimulador = (data: any) => {
       return;
     }
 
+    // Separar capstone del resto
+    const capstoneRamo = ramosNoCursados.find((a) => 
+      a.asignatura.toLowerCase().includes('capston') || a.asignatura.toLowerCase().includes('capstone')
+    );
+    const ramosRegulares = ramosNoCursados.filter((a) => a.codigo !== capstoneRamo?.codigo);
+
     // Ordenar ramos por nivel ascendente (más bajos primero)
-    const ramosOrdenados = [...ramosNoCursados].sort((a, b) => a.nivel - b.nivel);
+    const ramosOrdenados = [...ramosRegulares].sort((a, b) => a.nivel - b.nivel);
 
     const planOptimista: Plan = {};
     const inscritosSimulados = new Set<string>();
     const levantamientosOptimistas: Record<number, LevantamientoTipo> = {};
     const ramoSinPrereqOptimista: Record<number, string> = {};
+    const ramosColocados = new Set<string>();
 
     let semestresNeeded = 1;
 
-    // Algoritmo greedy: intentar llenar semestres con ramos
-    for (const ramo of ramosOrdenados) {
-      let colocado = false;
-      
-      // Intentar colocar en semestres existentes (de menor a mayor)
-      for (let semestre = 1; semestre <= semestresNeeded && !colocado; semestre++) {
-        if (!planOptimista[semestre]) planOptimista[semestre] = [];
+    // Algoritmo optimizado por semestre
+    while (ramosColocados.size < ramosOrdenados.length) {
+      let ramoColocadoEnSemestre = false;
+      const ramosDisponibles = ramosOrdenados.filter((r) => !ramosColocados.has(r.codigo));
 
-        // Obtener ramos en este semestre
-        const ramosEnSemestre = planOptimista[semestre]
+      if (!planOptimista[semestresNeeded]) {
+        planOptimista[semestresNeeded] = [];
+      }
+
+      // FASE 1: Rellenar sin levantamientos
+      for (const ramo of ramosDisponibles) {
+        const ramosEnSemestre = planOptimista[semestresNeeded]
           .map((cod) => malla.find((a) => a.codigo === cod))
           .filter(Boolean) as Asignatura[];
 
-        // Calcular créditos actuales
         const creditosActuales = ramosEnSemestre.reduce((sum, r) => sum + r.creditos, 0);
-        const limiteBase = 30;
-
-        // Verificar si cumple prerequisitos
-        const cumplePrerequisitos = cumplePrereq(ramo, planOptimista, semestre, malla, codCarrera);
+        const cumplePrerequisitos = cumplePrereq(ramo, planOptimista, semestresNeeded, malla, codCarrera);
 
         // Verificar diferencia de niveles
         const nivelesEnSemestre = ramosEnSemestre.map((r) => r.nivel);
@@ -435,44 +440,84 @@ export const useSimulador = (data: any) => {
               break;
             }
           }
+          if (hayConflictoDiferencia) break;
         }
 
         // Intentar colocar sin levantamientos
-        if (creditosActuales + ramo.creditos <= limiteBase && cumplePrerequisitos && !hayConflictoDiferencia) {
-          planOptimista[semestre].push(ramo.codigo);
+        if (creditosActuales + ramo.creditos <= 30 && cumplePrerequisitos && !hayConflictoDiferencia) {
+          planOptimista[semestresNeeded].push(ramo.codigo);
           inscritosSimulados.add(ramo.codigo);
-          colocado = true;
-        } 
-        // Si no cabe por créditos, intentar con levantamiento de créditos
-        else if (creditosActuales + ramo.creditos <= 35 && cumplePrerequisitos && !hayConflictoDiferencia && !levantamientosOptimistas[semestre]) {
-          planOptimista[semestre].push(ramo.codigo);
-          inscritosSimulados.add(ramo.codigo);
-          levantamientosOptimistas[semestre] = 'creditos';
-          colocado = true;
-        }
-        // Si hay conflicto de prerequisitos, intentar con levantamiento de prerequisitos
-        else if (!cumplePrerequisitos && creditosActuales + ramo.creditos <= limiteBase && !hayConflictoDiferencia && !levantamientosOptimistas[semestre]) {
-          planOptimista[semestre].push(ramo.codigo);
-          inscritosSimulados.add(ramo.codigo);
-          levantamientosOptimistas[semestre] = 'prerequisitos';
-          ramoSinPrereqOptimista[semestre] = ramo.codigo;
-          colocado = true;
-        }
-        // Si hay conflicto de diferencia de niveles, intentar con levantamiento de dispersión
-        else if (hayConflictoDiferencia && creditosActuales + ramo.creditos <= limiteBase && cumplePrerequisitos && !levantamientosOptimistas[semestre]) {
-          planOptimista[semestre].push(ramo.codigo);
-          inscritosSimulados.add(ramo.codigo);
-          levantamientosOptimistas[semestre] = 'dispersion';
-          colocado = true;
+          ramosColocados.add(ramo.codigo);
+          ramoColocadoEnSemestre = true;
         }
       }
 
-      // Si no se colocó en ningún semestre, crear uno nuevo
-      if (!colocado) {
-        semestresNeeded++;
-        planOptimista[semestresNeeded] = [ramo.codigo];
-        inscritosSimulados.add(ramo.codigo);
+      // FASE 2: Rellenar con levantamientos (solo si hay espacio)
+      if (!levantamientosOptimistas[semestresNeeded]) {
+        for (const ramo of ramosDisponibles) {
+          if (ramosColocados.has(ramo.codigo)) continue;
+
+          const ramosEnSemestre = planOptimista[semestresNeeded]
+            .map((cod) => malla.find((a) => a.codigo === cod))
+            .filter(Boolean) as Asignatura[];
+
+          const creditosActuales = ramosEnSemestre.reduce((sum, r) => sum + r.creditos, 0);
+          const cumplePrerequisitos = cumplePrereq(ramo, planOptimista, semestresNeeded, malla, codCarrera);
+
+          const nivelesEnSemestre = ramosEnSemestre.map((r) => r.nivel);
+          const nivelesConRamo = [...nivelesEnSemestre, ramo.nivel];
+          let hayConflictoDiferencia = false;
+          
+          for (let i = 0; i < nivelesConRamo.length; i++) {
+            for (let j = i + 1; j < nivelesConRamo.length; j++) {
+              if (Math.abs(nivelesConRamo[i] - nivelesConRamo[j]) >= 3) {
+                hayConflictoDiferencia = true;
+                break;
+              }
+            }
+            if (hayConflictoDiferencia) break;
+          }
+
+          // Intentar con levantamiento de créditos
+          if (creditosActuales + ramo.creditos <= 35 && cumplePrerequisitos && !hayConflictoDiferencia) {
+            planOptimista[semestresNeeded].push(ramo.codigo);
+            inscritosSimulados.add(ramo.codigo);
+            ramosColocados.add(ramo.codigo);
+            levantamientosOptimistas[semestresNeeded] = 'creditos';
+            ramoColocadoEnSemestre = true;
+          }
+          // Intentar con levantamiento de prerequisitos
+          else if (!cumplePrerequisitos && creditosActuales + ramo.creditos <= 30 && !hayConflictoDiferencia) {
+            planOptimista[semestresNeeded].push(ramo.codigo);
+            inscritosSimulados.add(ramo.codigo);
+            ramosColocados.add(ramo.codigo);
+            levantamientosOptimistas[semestresNeeded] = 'prerequisitos';
+            ramoSinPrereqOptimista[semestresNeeded] = ramo.codigo;
+            ramoColocadoEnSemestre = true;
+          }
+          // Intentar con levantamiento de dispersión
+          else if (hayConflictoDiferencia && creditosActuales + ramo.creditos <= 30 && cumplePrerequisitos) {
+            planOptimista[semestresNeeded].push(ramo.codigo);
+            inscritosSimulados.add(ramo.codigo);
+            ramosColocados.add(ramo.codigo);
+            levantamientosOptimistas[semestresNeeded] = 'dispersion';
+            ramoColocadoEnSemestre = true;
+          }
+        }
       }
+
+      // Si no se colocó ningún ramo en este semestre, pasar al siguiente
+      if (!ramoColocadoEnSemestre) {
+        semestresNeeded++;
+      }
+    }
+
+    // Agregar capstone en el último semestre si existe
+    let totalSemestres = semestresNeeded;
+    if (capstoneRamo) {
+      totalSemestres = semestresNeeded + 1;
+      planOptimista[totalSemestres] = [capstoneRamo.codigo];
+      inscritosSimulados.add(capstoneRamo.codigo);
     }
 
     // Aplicar el plan optimista
@@ -488,10 +533,10 @@ export const useSimulador = (data: any) => {
     }));
     setMaxSemestreVisiblePorCarrera((prev) => ({ 
       ...prev, 
-      [codCarrera]: Math.max(semestresNeeded, prev[codCarrera] ?? semestresNeeded) 
+      [codCarrera]: totalSemestres
     }));
 
-    alert(`✅ Simulación optimista completada!\n\nSemestres necesarios: ${semestresNeeded}\nRamos colocados: ${ramosOrdenados.length}`);
+    alert(`✅ Simulación optimista completada!\n\nSemestres necesarios: ${totalSemestres}\nRamos colocados: ${ramosOrdenados.length}${capstoneRamo ? '\nCapstone en semestre ' + totalSemestres : ''}`);
   }, [noCursada, cumplePrereq]);
 
   const guardarProyeccion = useCallback(async (

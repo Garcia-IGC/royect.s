@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface CarrerHeaderProps {
-  carrera: { codigo: string; carrera: string; catalogo: string };
+  carrera: { codigo: string; carrera: string; catalogo: string; malla?: any[] };
   enEdicion: boolean;
   totalCambios: number;
   totalInscritosSimulados: number;
@@ -10,6 +10,7 @@ interface CarrerHeaderProps {
   onSimulate: () => void;
   onCancel: () => void;
   onSave: () => void;
+  onSimularOptimista?: () => void;
 }
 
 const CarrerHeader: React.FC<CarrerHeaderProps> = ({
@@ -22,6 +23,7 @@ const CarrerHeader: React.FC<CarrerHeaderProps> = ({
   onSimulate,
   onCancel,
   onSave,
+  onSimularOptimista,
 }) => {
   const totalModificaciones = totalCambios + totalInscritosSimulados;
 
@@ -43,6 +45,14 @@ const CarrerHeader: React.FC<CarrerHeaderProps> = ({
           </button>
         ) : (
           <>
+            {onSimularOptimista && (
+              <button
+                onClick={onSimularOptimista}
+                className="text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold shadow-md transition"
+              >
+                🚀 Optimista
+              </button>
+            )}
             {totalModificaciones > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-white bg-white/20 px-3 py-1.5 rounded-lg">
@@ -78,6 +88,7 @@ const CarrerHeader: React.FC<CarrerHeaderProps> = ({
         )}
       </div>
     </div>
+
   );
 };
 
