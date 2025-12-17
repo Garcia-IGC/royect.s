@@ -148,6 +148,18 @@ let ProyeccionService = class ProyeccionService {
         });
         return proyeccionActualizada;
     }
+    async obtenerDemandaPorAsignatura() {
+        const grupos = await this.prisma.ramo.groupBy({
+            by: ['codigo', 'asignatura'],
+            _count: { _all: true },
+        });
+        grupos.sort((a, b) => (b._count._all - a._count._all));
+        return grupos.map(g => ({
+            codigo: g.codigo,
+            asignatura: g.asignatura,
+            demanda: g._count._all,
+        }));
+    }
 };
 exports.ProyeccionService = ProyeccionService;
 exports.ProyeccionService = ProyeccionService = __decorate([

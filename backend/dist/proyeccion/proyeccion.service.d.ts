@@ -103,4 +103,9 @@ export declare class ProyeccionService {
         nombre: string;
         id_proyeccion: number;
     }>;
+    obtenerDemandaPorAsignatura(): Promise<{
+        codigo: string;
+        asignatura: string;
+        demanda: number;
+    }[]>;
 }

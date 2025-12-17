@@ -29,4 +29,9 @@ export class ProyeccionController {
   async actualizar(@Param('id') id: string, @Body() data: any) {
     return this.proyeccionService.actualizarProyeccion(parseInt(id), data);
   }
+
+  @Get('demanda')
+  async demanda() {
+    return this.proyeccionService.obtenerDemandaPorAsignatura();
+  }
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
+import { proyeccionService } from './services/proyeccionService';
 
 interface Ramo {
   id_ramo: number;
@@ -37,10 +38,29 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut, onEditarProyec
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [hoveredAsignatura, setHoveredAsignatura] = useState<string | null>(null);
+  const [demandaMap, setDemandaMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
     cargarProyecciones();
   }, [rut]);
+
+  useEffect(() => {
+    //demanda global
+    const cargarDemanda = async () => {
+      try {
+        const data = await proyeccionService.demanda();
+        const map = data.reduce<Record<string, number>>((acc, item) => {
+          acc[item.codigo] = item.demanda;
+          return acc;
+        }, {});
+        setDemandaMap(map);
+      } catch (e) {
+        
+        console.warn('No se pudo cargar demanda por asignatura');
+      }
+    };
+    cargarDemanda();
+  }, []);
 
   const cargarProyecciones = async () => {
     try {
@@ -48,7 +68,7 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut, onEditarProyec
       const response = await axios.get(`http://localhost:3000/proyeccion/obtener/${rut}`);
       setProyecciones(response.data);
       
-      // Seleccionar automáticamente la primera proyección si existe
+      
       if (response.data.length > 0) {
         setProyeccionSeleccionada(response.data[0]);
       }
@@ -98,7 +118,7 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut, onEditarProyec
   };
 
   
-  type DemandaItem = { codigo: string; asignatura: string};
+  type DemandaItem = { codigo: string; asignatura: string };
 
   const cursosDemanda = useMemo<DemandaItem[]>(() => {
     if (!proyeccionSeleccionada) return [];
@@ -381,7 +401,6 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut, onEditarProyec
         </div>
       )}
       
-      {/* Recuadro de demanda (mock) */}
       {proyeccionSeleccionada && (
         <div className="bg-white rounded-xl shadow-lg p-4">
           <div className="flex items-center justify-between mb-3">
@@ -400,8 +419,10 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut, onEditarProyec
                     <div className="text-xs text-gray-500">{item.codigo}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-indigo-700">--</span>
-                    <span className="text-xs text-gray-500">simulaciones</span>
+                    <span className="text-sm font-semibold text-indigo-700">
+                      {demandaMap[item.codigo] ?? '--'}
+                    </span>
+                    <span className="text-xs text-gray-500">proyecciones</span>
                   </div>
                 </div>
               ))}

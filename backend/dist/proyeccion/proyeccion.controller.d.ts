@@ -103,4 +103,9 @@ export declare class ProyeccionController {
         nombre: string;
         id_proyeccion: number;
     }>;
+    demanda(): Promise<{
+        codigo: string;
+        asignatura: string;
+        demanda: number;
+    }[]>;
 }

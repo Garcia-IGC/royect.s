@@ -17,4 +17,9 @@ export const proyeccionService = {
     const response = await apiClient.put(`/proyeccion/actualizar/${id}`, payload);
     return response.data;
   },
+
+  demanda: async () => {
+    const response = await apiClient.get('/proyeccion/demanda');
+    return response.data as Array<{ codigo: string; asignatura: string; demanda: number }>;
+  },
 };
