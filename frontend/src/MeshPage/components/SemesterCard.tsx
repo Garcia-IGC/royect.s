@@ -1,5 +1,7 @@
 import React from 'react';
 
+type LevantamientoTipo = 'creditos' | 'dispersion' | 'prerequisitos' | null;
+
 interface SemesterCardProps {
   nivel: number;
   totalAsignaturas: number;
@@ -7,6 +9,11 @@ interface SemesterCardProps {
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   children: React.ReactNode;
+  isEditing?: boolean;
+  codCarrera?: string;
+  levantamientoActual?: LevantamientoTipo;
+  onToggleLevantamiento?: (tipo: LevantamientoTipo) => void;
+  limiteCreditos?: number;
 }
 
 const SemesterCard: React.FC<SemesterCardProps> = ({
@@ -16,9 +23,19 @@ const SemesterCard: React.FC<SemesterCardProps> = ({
   onDragOver,
   onDrop,
   children,
+  isEditing = false,
+  levantamientoActual = null,
+  onToggleLevantamiento,
+  limiteCreditos = 30,
 }) => {
-  const creditosExcedidos = creditosSemestre > 30;
-  const creditosCasi = creditosSemestre >= 25 && creditosSemestre <= 30;
+  const creditosExcedidos = creditosSemestre > limiteCreditos;
+  const creditosCasi = creditosSemestre >= limiteCreditos - 5 && creditosSemestre <= limiteCreditos;
+
+  const opcionesLevantamiento = [
+    { tipo: 'creditos' as const, label: 'Créditos (30→35)', icon: '💰' },
+    { tipo: 'dispersion' as const, label: 'Dispersión', icon: '📚' },
+    { tipo: 'prerequisitos' as const, label: 'Prerequisitos', icon: '🔓' },
+  ];
 
   return (
     <div
@@ -50,10 +67,36 @@ const SemesterCard: React.FC<SemesterCardProps> = ({
               : 'bg-white/20 text-white'
           }`}
         >
-          {creditosSemestre} / 30 SCT
+          {creditosSemestre} / {limiteCreditos} SCT
           {creditosExcedidos && ' ⚠️'}
         </div>
       </div>
+
+      {/* Selector de levantamiento */}
+      {isEditing && onToggleLevantamiento && (
+        <div className="mb-3 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+          <p className="text-xs font-semibold text-gray-700 mb-2 text-center">
+            🎯 Levantamiento (1 máx)
+          </p>
+          <div className="grid grid-cols-3 gap-1">
+            {opcionesLevantamiento.map(({ tipo, label, icon }) => (
+              <button
+                key={tipo}
+                onClick={() => onToggleLevantamiento(levantamientoActual === tipo ? null : tipo)}
+                className={`text-xs py-1 px-1 rounded font-semibold transition-all ${
+                  levantamientoActual === tipo
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-400'
+                }`}
+                title={label}
+              >
+                {icon}
+                <div className="text-xs">{label.split(' ')[0]}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Zona de drop */}
       <div className="min-h-[100px] space-y-2 p-2 rounded-lg border-2 border-transparent bg-transparent">

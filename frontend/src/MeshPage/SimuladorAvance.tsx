@@ -173,6 +173,9 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
         const inscritosSimulados = simulador.ramosInscritosSimulacion[carrera.codigo] ?? new Set();
         const totalCambios = Object.values(planActual).reduce((acc, v) => acc + (v?.length ?? 0), 0);
         const semestresAgrupados = simulador.agruparMallaPorSemestre(carrera.malla);
+        const maxSemestreOriginal = Math.max(...semestresAgrupados.map((s) => s.nivel), 0);
+        const maxSemestreVisible = simulador.maxSemestreVisiblePorCarrera[carrera.codigo] ?? maxSemestreOriginal;
+        const semestresAMostrar = Array.from({ length: maxSemestreVisible }, (_, i) => i + 1);
 
         return (
           <div key={idx} className="mb-8">
@@ -191,7 +194,8 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
             <div className="bg-white rounded-b-xl shadow-lg p-4">
               <div className="overflow-x-auto overflow-y-visible relative isolate">
                 <div className="flex gap-3 min-w-max pb-4">
-                  {semestresAgrupados.map(({ nivel, asignaturas }) => {
+                  {semestresAMostrar.map((nivel) => {
+                    const asignaturas = semestresAgrupados.find((s) => s.nivel === nivel)?.asignaturas ?? [];
                     const ramosMovidosAqui = (planActual[nivel] ?? [])
                       .map((codigo) => carrera.malla.find((a) => a.codigo === codigo))
                       .filter(Boolean) as Asignatura[];
@@ -221,6 +225,11 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
                             simulador.setDraggingRamo(null);
                           }
                         }}
+                        isEditing={enEdicion}
+                        codCarrera={carrera.codigo}
+                        levantamientoActual={simulador.levantamientos[carrera.codigo]?.[nivel] ?? null}
+                        onToggleLevantamiento={(tipo) => simulador.toggleLevantamiento(carrera.codigo, nivel, tipo)}
+                        limiteCreditos={simulador.obtenerLimiteCreditos(carrera.codigo, nivel)}
                       >
                         {todosRamos.length === 0 ? (
                           <div className="text-xs text-gray-400 text-center py-8">
@@ -266,6 +275,17 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
                       </SemesterCard>
                     );
                   })}
+                  {enEdicion && (
+                    <div className="flex-shrink-0 w-32 flex items-center justify-center">
+                      <button
+                        onClick={() => simulador.agregarSemestre(carrera.codigo, maxSemestreOriginal)}
+                        className="w-16 h-16 rounded-lg bg-gradient-to-br from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 shadow-md flex items-center justify-center text-white font-bold text-2xl transition-all hover:shadow-lg"
+                        title="Agregar semestre"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -27,6 +27,10 @@ type ProyeccionEditar = {
   }>;
 };
 
+type LevantamientoTipo = 'creditos' | 'dispersion' | 'prerequisitos' | null;
+
+type LevantamientosPorSemestre = Record<string, Record<number, LevantamientoTipo>>;
+
 export const useSimulador = (data: any) => {
   const [planPorCarrera, setPlanPorCarrera] = useState<Record<string, Plan>>({});
   const [editandoCarrera, setEditandoCarrera] = useState<string | null>(null);
@@ -34,6 +38,9 @@ export const useSimulador = (data: any) => {
   const [hoveredAsignatura, setHoveredAsignatura] = useState<string | null>(null);
   const [ramosInscritosSimulacion, setRamosInscritosSimulacion] = useState<Record<string, Set<string>>>({});
   const [proyeccionId, setProyeccionId] = useState<number | null>(null);
+  const [levantamientos, setLevantamientos] = useState<LevantamientosPorSemestre>({});
+  const [ramoSinPrereqPorSemestre, setRamoSinPrereqPorSemestre] = useState<Record<string, Record<number, string>>>({});
+  const [maxSemestreVisiblePorCarrera, setMaxSemestreVisiblePorCarrera] = useState<Record<string, number>>({});
 
   const noCursada = useCallback((a: Asignatura) => a.status !== 'APROBADO' && a.status !== 'INSCRITO', []);
   
@@ -66,6 +73,23 @@ export const useSimulador = (data: any) => {
     }, 0);
   }, [ramosInscritosSimulacion, obtenerNivelActualRamo]);
 
+  const obtenerLimiteCreditos = useCallback((codCarrera: string, nivel: number): number => {
+    const levantamiento = levantamientos[codCarrera]?.[nivel];
+    return levantamiento === 'creditos' ? 35 : 30;
+  }, [levantamientos]);
+
+  const tieneDispersinLevantada = useCallback((codCarrera: string, nivel: number): boolean => {
+    return levantamientos[codCarrera]?.[nivel] === 'dispersion';
+  }, [levantamientos]);
+
+  const tienePrerequisitosLevantados = useCallback((codCarrera: string, nivel: number): boolean => {
+    return levantamientos[codCarrera]?.[nivel] === 'prerequisitos';
+  }, [levantamientos]);
+
+  const obtenerRamoSinPrereqPermitido = useCallback((codCarrera: string, nivel: number): string | null => {
+    return ramoSinPrereqPorSemestre[codCarrera]?.[nivel] ?? null;
+  }, [ramoSinPrereqPorSemestre]);
+
   const aprobadaOPlanAnterior = useCallback((
     codigoReq: string,
     plan: Plan,
@@ -77,13 +101,17 @@ export const useSimulador = (data: any) => {
     if (req && (req.status === 'APROBADO' || req.status === 'INSCRITO')) return true;
 
     const inscritosSimulados = ramosInscritosSimulacion[codCarrera] ?? new Set();
-    if (inscritosSimulados.has(codigoReq)) return true;
+    // Solo contar como aprobado si está inscrito en un semestre ANTERIOR
+    if (inscritosSimulados.has(codigoReq)) {
+      const nivelDelRamoInscrito = obtenerNivelActualRamo(codigoReq, req?.nivel ?? 999, plan);
+      if (nivelDelRamoInscrito < nivelDestino) return true;
+    }
 
     for (const [nivStr, cods] of Object.entries(plan)) {
       if (Number(nivStr) < nivelDestino && (cods ?? []).includes(codigoReq)) return true;
     }
     return false;
-  }, [ramosInscritosSimulacion]);
+  }, [ramosInscritosSimulacion, obtenerNivelActualRamo]);
 
   const cumplePrereq = useCallback((
     a: Asignatura,
@@ -117,6 +145,40 @@ export const useSimulador = (data: any) => {
       .map((nivel) => ({ nivel, asignaturas: sem[nivel] }));
   }, []);
 
+  const validarDiferenciaNiveles = useCallback((
+    nivelRamoActual: number,
+    nivelDestino: number,
+    plan: Plan,
+    malla: Asignatura[],
+    codCarrera: string
+  ): { valido: boolean; mensaje?: string } => {
+    // Si el levantamiento de dispersión está activo, no validar diferencia
+    if (tieneDispersinLevantada(codCarrera, nivelDestino)) {
+      return { valido: true };
+    }
+
+    const ramosEnSemestre = malla.filter((a) => obtenerNivelActualRamo(a.codigo, a.nivel, plan) === nivelDestino);
+    
+    if (ramosEnSemestre.length === 0) return { valido: true };
+
+    const nivelesOriginales = ramosEnSemestre.map((a) => a.nivel);
+    const nivelesConRamo = [...nivelesOriginales, nivelRamoActual];
+    
+    // Verificar si hay 2 o más ramos con diferencia >= 3
+    for (let i = 0; i < nivelesConRamo.length; i++) {
+      for (let j = i + 1; j < nivelesConRamo.length; j++) {
+        if (Math.abs(nivelesConRamo[i] - nivelesConRamo[j]) >= 3) {
+          return {
+            valido: false,
+            mensaje: `❌ No se puede inscribir ramos con diferencia de nivel >= 3 en el mismo semestre.\n\nRamos presentes: niveles ${[...new Set(nivelesConRamo)].sort((a, b) => a - b).join(', ')}\n⚠️ Diferencia máxima permitida: 2 niveles`,
+          };
+        }
+      }
+    }
+
+    return { valido: true };
+  }, [obtenerNivelActualRamo, tieneDispersinLevantada]);
+
   const moverRamo = useCallback((
     codCarrera: string,
     codigo: string,
@@ -141,26 +203,36 @@ export const useSimulador = (data: any) => {
     const inscritosSimulados = ramosInscritosSimulacion[codCarrera] ?? new Set();
     const seraInscrito = inscritosSimulados.has(codigo);
     
-    if (seraInscrito && creditosActualesSemestre + asig.creditos > 30) {
+    const limiteCreditos = obtenerLimiteCreditos(codCarrera, nivelDestino);
+    if (seraInscrito && creditosActualesSemestre + asig.creditos > limiteCreditos) {
       alert(
         `❌ No se puede mover "${asig.asignatura}" al semestre ${nivelDestino}.\n\n` +
         `Créditos inscritos en semestre ${nivelDestino}: ${creditosActualesSemestre} SCT\n` +
         `Créditos del ramo: ${asig.creditos} SCT\n` +
         `Total resultante: ${creditosActualesSemestre + asig.creditos} SCT\n\n` +
-        `⚠️ Máximo permitido: 30 SCT por semestre`
+        `⚠️ Máximo permitido: ${limiteCreditos} SCT por semestre`
       );
       return;
     }
 
     planTemp[nivelDestino] = [...(planTemp[nivelDestino] ?? []), codigo];
 
-    if (!cumplePrereq(asig, planTemp, nivelDestino, malla, codCarrera)) {
-      alert(`❌ No se puede mover "${asig.asignatura}" al semestre ${nivelDestino}.\nNo cumple con los prerequisitos necesarios.`);
+    const validacionNiveles = validarDiferenciaNiveles(asig.nivel, nivelDestino, planTemp, malla, codCarrera);
+    if (!validacionNiveles.valido) {
+      alert(validacionNiveles.mensaje);
       return;
     }
 
+    if (!cumplePrereq(asig, planTemp, nivelDestino, malla, codCarrera)) {
+      const ramoSinPrereqPermitido = obtenerRamoSinPrereqPermitido(codCarrera, nivelDestino);
+      if (ramoSinPrereqPermitido !== codigo) {
+        alert(`❌ No se puede mover "${asig.asignatura}" al semestre ${nivelDestino}.\nNo cumple con los prerequisitos necesarios.`);
+        return;
+      }
+    }
+
     setPlanPorCarrera((prev) => ({ ...prev, [codCarrera]: planTemp }));
-  }, [planPorCarrera, ramosInscritosSimulacion, noCursada, obtenerNivelActualRamo, calcularCreditosSemestre, cumplePrereq]);
+  }, [planPorCarrera, ramosInscritosSimulacion, noCursada, obtenerNivelActualRamo, calcularCreditosSemestre, obtenerLimiteCreditos, validarDiferenciaNiveles, cumplePrereq, obtenerRamoSinPrereqPermitido]);
 
   const toggleInscripcionSimulada = useCallback((codCarrera: string, codigo: string, malla: Asignatura[]) => {
     const asig = malla.find((a) => a.codigo === codigo);
@@ -176,19 +248,59 @@ export const useSimulador = (data: any) => {
         nuevosInscritos.delete(codigo);
         return { ...prev, [codCarrera]: nuevosInscritos };
       });
+      // Limpiar el ramo sin prereq si es el que se está desinscribiendo
+      if (obtenerRamoSinPrereqPermitido(codCarrera, nivelActual) === codigo) {
+        setRamoSinPrereqPorSemestre((prev) => {
+          const nuevos = { ...prev, [codCarrera]: { ...prev[codCarrera] } };
+          delete nuevos[codCarrera][nivelActual];
+          return nuevos;
+        });
+      }
       return;
     }
     
+    const limiteCreditos = obtenerLimiteCreditos(codCarrera, nivelActual);
     const creditosActualesSemestre = calcularCreditosSemestre(nivelActual, planActual, malla, codCarrera);
     
-    if (creditosActualesSemestre + asig.creditos > 30) {
+    if (creditosActualesSemestre + asig.creditos > limiteCreditos) {
       alert(
         `❌ No se puede inscribir "${asig.asignatura}" en semestre ${nivelActual}.\n\n` +
         `Créditos inscritos actuales: ${creditosActualesSemestre} SCT\n` +
         `Créditos del ramo: ${asig.creditos} SCT\n` +
         `Total resultante: ${creditosActualesSemestre + asig.creditos} SCT\n\n` +
-        `⚠️ Máximo permitido: 30 SCT por semestre`
+        `⚠️ Máximo permitido: ${limiteCreditos} SCT por semestre`
       );
+      return;
+    }
+
+    const validacionNiveles = validarDiferenciaNiveles(asig.nivel, nivelActual, planActual, malla, codCarrera);
+    if (!validacionNiveles.valido) {
+      alert(validacionNiveles.mensaje);
+      return;
+    }
+
+    if (!cumplePrereq(asig, planActual, nivelActual, malla, codCarrera)) {
+      const ramoSinPrereqPermitido = obtenerRamoSinPrereqPermitido(codCarrera, nivelActual);
+      if (ramoSinPrereqPermitido !== null) {
+        alert(`❌ Ya hay un ramo sin prerequisitos permitido en este semestre: ${malla.find((a) => a.codigo === ramoSinPrereqPermitido)?.asignatura}`);
+        return;
+      }
+      
+      // Permitir si el levantamiento de prerequisitos está activo
+      if (tienePrerequisitosLevantados(codCarrera, nivelActual)) {
+        setRamosInscritosSimulacion((prev) => {
+          const nuevosInscritos = new Set(prev[codCarrera] ?? new Set());
+          nuevosInscritos.add(codigo);
+          return { ...prev, [codCarrera]: nuevosInscritos };
+        });
+        setRamoSinPrereqPorSemestre((prev) => {
+          const nuevos = { ...prev, [codCarrera]: { ...prev[codCarrera], [nivelActual]: codigo } };
+          return nuevos;
+        });
+        return;
+      }
+
+      alert(`❌ No se puede inscribir "${asig.asignatura}" en semestre ${nivelActual}.\nNo cumple con los prerequisitos necesarios.`);
       return;
     }
     
@@ -197,7 +309,7 @@ export const useSimulador = (data: any) => {
       nuevosInscritos.add(codigo);
       return { ...prev, [codCarrera]: nuevosInscritos };
     });
-  }, [ramosInscritosSimulacion, planPorCarrera, obtenerNivelActualRamo, calcularCreditosSemestre]);
+  }, [ramosInscritosSimulacion, planPorCarrera, obtenerNivelActualRamo, calcularCreditosSemestre, obtenerLimiteCreditos, validarDiferenciaNiveles, cumplePrereq, obtenerRamoSinPrereqPermitido, tienePrerequisitosLevantados]);
 
   const cargarProyeccionParaEditar = useCallback((proyeccion: ProyeccionEditar) => {
     const carrera = data.carreras.find((c: any) => c.codigo === proyeccion.codigo);
@@ -231,10 +343,46 @@ export const useSimulador = (data: any) => {
   const cancelar = useCallback((codCarrera: string, onCancelarEdicion?: () => void) => {
     setPlanPorCarrera((prev) => ({ ...prev, [codCarrera]: {} }));
     setRamosInscritosSimulacion((prev) => ({ ...prev, [codCarrera]: new Set() }));
+    setLevantamientos((prev) => ({ ...prev, [codCarrera]: {} }));
+    setRamoSinPrereqPorSemestre((prev) => ({ ...prev, [codCarrera]: {} }));
     setEditandoCarrera(null);
     setProyeccionId(null);
     onCancelarEdicion?.();
   }, []);
+
+  const toggleLevantamiento = useCallback((codCarrera: string, nivel: number, tipo: LevantamientoTipo) => {
+    setLevantamientos((prev) => {
+      const actual = prev[codCarrera]?.[nivel];
+      const nuevoValor = actual === tipo ? null : tipo;
+      
+      return {
+        ...prev,
+        [codCarrera]: {
+          ...(prev[codCarrera] ?? {}),
+          [nivel]: nuevoValor,
+        },
+      };
+    });
+
+    // Limpiar ramo sin prereq si se desactiva ese levantamiento
+    if (tipo === 'prerequisitos') {
+      setRamoSinPrereqPorSemestre((prev) => {
+        const nuevos = { ...prev, [codCarrera]: { ...prev[codCarrera] } };
+        if (levantamientos[codCarrera]?.[nivel] === 'prerequisitos') {
+          delete nuevos[codCarrera][nivel];
+        }
+        return nuevos;
+      });
+    }
+  }, [levantamientos]);
+
+  const agregarSemestre = useCallback((codCarrera: string, semestresActuales: number) => {
+    const maxActual = maxSemestreVisiblePorCarrera[codCarrera] ?? semestresActuales;
+    setMaxSemestreVisiblePorCarrera((prev) => ({
+      ...prev,
+      [codCarrera]: maxActual + 1,
+    }));
+  }, [maxSemestreVisiblePorCarrera]);
 
   const guardarProyeccion = useCallback(async (
     codCarrera: string,
@@ -286,6 +434,8 @@ export const useSimulador = (data: any) => {
     hoveredAsignatura,
     ramosInscritosSimulacion,
     proyeccionId,
+    levantamientos,
+    maxSemestreVisiblePorCarrera,
     setEditandoCarrera,
     setDraggingRamo,
     setHoveredAsignatura,
@@ -304,5 +454,10 @@ export const useSimulador = (data: any) => {
     cargarProyeccionParaEditar,
     cancelar,
     guardarProyeccion,
+    obtenerLimiteCreditos,
+    tieneDispersinLevantada,
+    tienePrerequisitosLevantados,
+    toggleLevantamiento,
+    agregarSemestre,
   };
 };
