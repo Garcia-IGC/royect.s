@@ -98,10 +98,12 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut, onEditarProyec
   const obtenerNombresPrereq = (codigosPrereq: string, ramos: Ramo[]): string => {
     if (!codigosPrereq) return '';
     const codigos = codigosPrereq.split(',').map((c) => c.trim());
-    const nombres = codigos.map((codigo) => {
-      const ramo = ramos.find((r) => r.codigo === codigo);
-      return ramo ? ramo.asignatura : codigo;
-    });
+    const nombres = codigos
+      .map((codigo) => {
+        const ramo = ramos.find((r) => r.codigo === codigo);
+        return ramo ? ramo.asignatura : null;
+      })
+      .filter((nombre) => nombre !== null) as string[];
     return nombres.join(', ');
   };
 

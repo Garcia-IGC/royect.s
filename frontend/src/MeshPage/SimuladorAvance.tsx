@@ -240,6 +240,7 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
                           todosRamos.map((asig) => {
                             const ramoId = `${nivel}-${asig.codigo}`;
                             const nombresPrereq = simulador.obtenerNombresPrereq(asig.prereq, carrera.malla);
+                            const prereqNoSatisfechos = simulador.obtenerPrereqNoSatisfechos(asig, planActual, nivel, carrera.malla, carrera.codigo);
                             const fueMovido = asig.nivel !== nivel || ramosMovidosAqui.some((r) => r.codigo === asig.codigo);
                             const cumple = !fueMovido || simulador.cumplePrereq(asig, planActual, nivel, carrera.malla, carrera.codigo);
                             const esMovible = simulador.noCursada(asig) && enEdicion;
@@ -255,6 +256,7 @@ const SimuladorAvance: React.FC<Props> = ({ data, proyeccionEditar, onCancelarEd
                                 isSimulated={estaInscritoSimulado}
                                 isMoved={fueMovido}
                                 cumplePrereq={cumple}
+                                prereqNoSatisfechos={prereqNoSatisfechos}
                                 onDragStart={() => esMovible && simulador.setDraggingRamo(asig.codigo)}
                                 onSimulateInscription={() => simulador.toggleInscripcionSimulada(carrera.codigo, asig.codigo, carrera.malla)}
                                 onMouseEnter={() => simulador.setHoveredAsignatura(ramoId)}

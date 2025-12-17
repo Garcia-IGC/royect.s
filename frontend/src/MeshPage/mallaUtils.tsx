@@ -19,9 +19,11 @@ export function agruparPorSemestre(malla: Asignatura[]) {
 export function obtenerNombresPrereq(codigosPrereq: string, malla: Asignatura[]): string {
   if (!codigosPrereq) return '';
   const codigos = codigosPrereq.split(',').map((c) => c.trim());
-  const nombres = codigos.map((codigo) => {
-    const asignatura = malla.find((a) => a.codigo === codigo);
-    return asignatura ? asignatura.asignatura : codigo;
-  });
+  const nombres = codigos
+    .map((codigo) => {
+      const asignatura = malla.find((a) => a.codigo === codigo);
+      return asignatura ? asignatura.asignatura : null;
+    })
+    .filter((nombre) => nombre !== null) as string[];
   return nombres.join(', ');
 }

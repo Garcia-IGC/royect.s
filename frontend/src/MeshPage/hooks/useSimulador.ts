@@ -121,16 +121,45 @@ export const useSimulador = (data: any) => {
     codCarrera: string
   ) => {
     const reqs = parsePrereq(a.prereq);
-    return reqs.every((cod) => aprobadaOPlanAnterior(cod, plan, nivelDestino, malla, codCarrera));
+    // Filtrar solo los requisitos que pertenecen a la carrera (existen en la malla)
+    const reqsDelCarrera = reqs.filter((cod) => malla.some((asig) => asig.codigo === cod));
+    // Solo validar si cumple los requisitos que pertenecen a la carrera
+    return reqsDelCarrera.every((cod) => aprobadaOPlanAnterior(cod, plan, nivelDestino, malla, codCarrera));
+  }, [parsePrereq, aprobadaOPlanAnterior]);
+
+  const obtenerPrereqNoSatisfechos = useCallback((
+    a: Asignatura,
+    plan: Plan,
+    nivelDestino: number,
+    malla: Asignatura[],
+    codCarrera: string
+  ): string => {
+    const reqs = parsePrereq(a.prereq);
+    // Filtrar solo los requisitos que pertenecen a la carrera
+    const reqsDelCarrera = reqs.filter((cod) => malla.some((asig) => asig.codigo === cod));
+    // Obtener solo los no satisfechos que pertenecen a la carrera
+    const noSatisfechos = reqsDelCarrera.filter((cod) => !aprobadaOPlanAnterior(cod, plan, nivelDestino, malla, codCarrera));
+    
+    if (noSatisfechos.length === 0) return '';
+    
+    const nombres = noSatisfechos
+      .map((codigo) => {
+        const asignatura = malla.find((a) => a.codigo === codigo);
+        return asignatura ? asignatura.asignatura : null;
+      })
+      .filter((nombre) => nombre !== null) as string[];
+    return nombres.join(', ');
   }, [parsePrereq, aprobadaOPlanAnterior]);
 
   const obtenerNombresPrereq = useCallback((codigosPrereq: string, malla: Asignatura[]): string => {
     if (!codigosPrereq) return '';
     const codigos = codigosPrereq.split(',').map((c) => c.trim());
-    const nombres = codigos.map((codigo) => {
-      const asignatura = malla.find((a) => a.codigo === codigo);
-      return asignatura ? asignatura.asignatura : codigo;
-    });
+    const nombres = codigos
+      .map((codigo) => {
+        const asignatura = malla.find((a) => a.codigo === codigo);
+        return asignatura ? asignatura.asignatura : null;
+      })
+      .filter((nombre) => nombre !== null) as string[];
     return nombres.join(', ');
   }, []);
 
@@ -602,6 +631,7 @@ export const useSimulador = (data: any) => {
     obtenerNivelActualRamo,
     calcularCreditosSemestre,
     cumplePrereq,
+    obtenerPrereqNoSatisfechos,
     obtenerNombresPrereq,
     agruparMallaPorSemestre,
     moverRamo,

@@ -18,6 +18,7 @@ interface AsignatureCardProps {
   isSimulated: boolean;
   isMoved: boolean;
   cumplePrereq: boolean;
+  prereqNoSatisfechos?: string;
   onDragStart: () => void;
   onSimulateInscription: () => void;
   onMouseEnter: () => void;
@@ -35,6 +36,7 @@ const AsignatureCard: React.FC<AsignatureCardProps> = ({
   isSimulated,
   isMoved,
   cumplePrereq,
+  prereqNoSatisfechos = '',
   onDragStart,
   onSimulateInscription,
   onMouseEnter,
@@ -129,9 +131,16 @@ const AsignatureCard: React.FC<AsignatureCardProps> = ({
           </span>
         )}
         {!cumplePrereq && noCursada && (
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500 text-white">
-            ⚠️ Sin prereq
-          </span>
+          <div className="w-full">
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500 text-white block">
+              ⚠️ Sin prereq
+            </span>
+            {prereqNoSatisfechos && (
+              <span className="text-[8px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 block mt-1 leading-tight">
+                Falta: {prereqNoSatisfechos}
+              </span>
+            )}
+          </div>
         )}
         {asig.intento > 0 && (
           <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-300">
