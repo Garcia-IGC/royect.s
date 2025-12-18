@@ -6,5 +6,4 @@ export const NAVIGATION_ITEMS: Array<{ id: ViewType; label: string }> = [
   { id: 'proyeccion', label: 'Proyección' },
   { id: 'simulador', label: 'Simulador de avance' },
   { id: 'guardadas', label: '📚 Proyecciones Guardadas' },
-  { id: 'optimizada', label: '✨ Proyección Optimizada' },
 ];
