@@ -1,4 +1,4 @@
-export type ViewType = 'avance' | 'cursados' | 'proyeccion' | 'simulador' | 'guardadas' | 'optimizada';
+export type ViewType = 'avance' | 'cursados' | 'proyeccion' | 'simulador' | 'guardadas';
 
 export const NAVIGATION_ITEMS: Array<{ id: ViewType; label: string }> = [
   { id: 'avance', label: 'Avance curricular' },
