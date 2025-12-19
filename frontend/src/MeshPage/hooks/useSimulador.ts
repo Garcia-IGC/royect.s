@@ -253,15 +253,19 @@ export const useSimulador = (data: any) => {
     }
 
     if (!cumplePrereq(asig, planTemp, nivelDestino, malla, codCarrera)) {
-      const ramoSinPrereqPermitido = obtenerRamoSinPrereqPermitido(codCarrera, nivelDestino);
-      if (ramoSinPrereqPermitido !== codigo) {
-        alert(`❌ No se puede mover "${asig.asignatura}" al semestre ${nivelDestino}.\nNo cumple con los prerequisitos necesarios.`);
-        return;
+      // Si hay levantamiento de prerequisitos en este semestre, permitir el movimiento
+      const tienePrereqLevantado = levantamientos[codCarrera]?.[nivelDestino] === 'prerequisitos';
+      if (!tienePrereqLevantado) {
+        const ramoSinPrereqPermitido = obtenerRamoSinPrereqPermitido(codCarrera, nivelDestino);
+        if (ramoSinPrereqPermitido !== codigo) {
+          alert(`❌ No se puede mover "${asig.asignatura}" al semestre ${nivelDestino}.\nNo cumple con los prerequisitos necesarios.`);
+          return;
+        }
       }
     }
 
     setPlanPorCarrera((prev) => ({ ...prev, [codCarrera]: planTemp }));
-  }, [planPorCarrera, ramosInscritosSimulacion, noCursada, obtenerNivelActualRamo, calcularCreditosSemestre, obtenerLimiteCreditos, validarDiferenciaNiveles, cumplePrereq, obtenerRamoSinPrereqPermitido]);
+  }, [planPorCarrera, ramosInscritosSimulacion, noCursada, obtenerNivelActualRamo, calcularCreditosSemestre, obtenerLimiteCreditos, validarDiferenciaNiveles, cumplePrereq, obtenerRamoSinPrereqPermitido, levantamientos]);
 
   const toggleInscripcionSimulada = useCallback((codCarrera: string, codigo: string, malla: Asignatura[]) => {
     const asig = malla.find((a) => a.codigo === codigo);
