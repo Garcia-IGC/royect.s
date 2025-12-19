@@ -326,16 +326,18 @@ const MostradorAvances: React.FC<MostradorAvancesProps> = ({ rut, onEditarProyec
                                 >
                                   {ramo.status}
                                 </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <h5 className="text-xs font-semibold text-gray-800 leading-tight">
+                                  {ramo.asignatura}
+                                </h5>
                                 {ramo.intento > 0 && (
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-300">
-                                    Intento: {ramo.intento}
+                                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-300">
+                                    {ramo.intento}° intento
                                   </span>
                                 )}
                               </div>
-
-                              <h5 className="text-xs font-semibold text-gray-800 mb-1 leading-tight">
-                                {ramo.asignatura}
-                              </h5>
 
                               {/* Badge de ramo proyectado */}
                               {(fueMovido || esProyectado) && (

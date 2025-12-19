@@ -58,14 +58,18 @@ const Avance: React.FC<Props> = ({ carreras }) => {
                               >
                                 {asig.status}
                               </span>
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                                {asig.intento}
-                              </span>
                             </div>
 
-                            <h4 className="text-xs font-semibold text-gray-800 mb-1 leading-tight">
-                              {asig.asignatura}
-                            </h4>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-semibold text-gray-800 leading-tight">
+                                {asig.asignatura}
+                              </h4>
+                              {asig.intento > 0 && (
+                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-300">
+                                  {asig.intento}° intento
+                                </span>
+                              )}
+                            </div>
 
                             {asig.prereq && hoveredAsignatura === asignaturaId && (
                               <div className="absolute left-full ml-2 top-0 z-[999] w-64 bg-white border-2 border-teal-400 rounded-lg shadow-2xl p-3">
